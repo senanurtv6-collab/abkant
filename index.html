@@ -3,51 +3,374 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Abkant Pres Büküm Sayacı</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Abkant Pres Takip Sistemi</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    
+    <style>
+        /* ==========================================
+               CSS BAŞLANGICI - Endüstriyel Tasarım
+           ========================================== */
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            background: #0a0e17;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        /* Üst Bildirim Çubuğu */
+        .bildirim-cubugu {
+            background: #1a1f2e;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2a3548;
+            font-size: 13px;
+        }
+        
+        .makine-durum {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .durum-noktasi {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            animation: nabiz 1.5s ease-in-out infinite;
+        }
+        
+        .durum-noktasi.calisiyor {
+            background: #00ff88;
+            box-shadow: 0 0 15px #00ff88;
+        }
+        
+        .durum-noktasi.beklemede {
+            background: #ffaa00;
+            box-shadow: 0 0 15px #ffaa00;
+            animation: none;
+        }
+        
+        .durum-noktasi.cevrimdisi {
+            background: #ff3333;
+            box-shadow: 0 0 15px #ff3333;
+            animation: none;
+        }
+        
+        @keyframes nabiz {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+        }
+        
+        /* Ana Konteyner */
+        .ana-konteyner {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Başlık */
+        .baslik {
+            text-align: center;
+            padding: 25px;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, #1a1f2e 0%, #252d3a 100%);
+            border-radius: 16px;
+            border: 1px solid #2a3548;
+        }
+        
+        .baslik h1 {
+            font-size: 2.2em;
+            background: linear-gradient(90deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        
+        .baslik .alt-bilgi {
+            color: #8899aa;
+            font-size: 1em;
+        }
+        
+        /* Kart Grid */
+        .kart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        /* Kart Stili */
+        .kart {
+            background: linear-gradient(135deg, #1a1f2e 0%, #1e2535 100%);
+            border-radius: 16px;
+            border: 1px solid #2a3548;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .kart:hover {
+            border-color: #e94560;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.2);
+        }
+        
+        .kart-baslik {
+            background: rgba(233, 69, 96, 0.15);
+            padding: 15px 20px;
+            font-weight: 700;
+            font-size: 1.1em;
+            border-bottom: 1px solid #2a3548;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .kart-icerik {
+            padding: 25px;
+        }
+        
+        /* Büyük Sayaç */
+        .dev-sayac {
+            font-size: 6em;
+            font-weight: 900;
+            text-align: center;
+            color: #e94560;
+            text-shadow: 0 0 40px rgba(233, 69, 96, 0.4);
+            transition: all 0.3s ease;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .dev-sayac.degisim {
+            animation: sayacAnim 0.5s ease-out;
+        }
+        
+        @keyframes sayacAnim {
+            0% { transform: scale(1.2); color: #ffffff; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); color: #e94560; }
+        }
+        
+        .son-islem {
+            text-align: center;
+            color: #8899aa;
+            margin-top: 10px;
+            font-size: 0.95em;
+        }
+        
+        /* Bugün Kartı */
+        .bugun-sayac {
+            font-size: 4em;
+            font-weight: 900;
+            text-align: center;
+            color: #00d2ff;
+            text-shadow: 0 0 30px rgba(0, 210, 255, 0.3);
+        }
+        
+        /* Tablo Kartı (Tam Genişlik) */
+        .tablo-kart {
+            grid-column: 1 / -1;
+            margin-bottom: 25px;
+        }
+        
+        .tablo-kapsayici {
+            max-height: 450px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            position: sticky;
+            top: 0;
+            background: #252d3a;
+        }
+        
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 700;
+            color: #e94560;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-variant-numeric: tabular-nums;
+        }
+        
+        tr {
+            transition: background 0.2s ease;
+        }
+        
+        tr:hover td {
+            background: rgba(233, 69, 96, 0.08);
+        }
+        
+        tr:last-child td {
+            background: rgba(0, 255, 136, 0.1);
+        }
+        
+        .zaman-damgasi {
+            color: #8899aa;
+        }
+        
+        .islem-no {
+            font-weight: 700;
+            color: #e94560;
+        }
+        
+        .yeni-islem {
+            animation: yeniSatir 0.8s ease-out;
+        }
+        
+        @keyframes yeniSatir {
+            from { background: rgba(0, 255, 136, 0.3); }
+            to { background: transparent; }
+        }
+        
+        /* Geçmiş Günler Grid */
+        .gunler-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            padding: 20px;
+        }
+        
+        .gun-kart {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            text-align: center;
+        }
+        
+        .gun-kart:hover {
+            background: rgba(233, 69, 96, 0.15);
+            border-color: #e94560;
+            transform: translateY(-2px);
+        }
+        
+        .gun-kart .gun-tarih {
+            font-size: 0.9em;
+            color: #8899aa;
+            margin-bottom: 8px;
+        }
+        
+        .gun-kart .gun-adet {
+            font-size: 2em;
+            font-weight: 700;
+            color: #00d2ff;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a1f2e; }
+        ::-webkit-scrollbar-thumb { background: #e94560; border-radius: 3px; }
+        
+        /* Mobil */
+        @media (max-width: 768px) {
+            .kart-grid { grid-template-columns: 1fr; }
+            .tablo-kart { grid-column: 1; }
+            .dev-sayac { font-size: 4em; }
+            .bugun-sayac { font-size: 3em; }
+            .baslik h1 { font-size: 1.5em; }
+            .gunler-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (max-width: 480px) {
+            .dev-sayac { font-size: 3em; }
+            .bugun-sayac { font-size: 2em; }
+            .gunler-grid { grid-template-columns: 1fr; }
+        }
+        
+        /* CSS SONU */
+    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Başlık -->
-        <header>
-            <h1>🏭 Abkant Pres Büküm Takip Sistemi</h1>
-            <p class="tarih" id="tarih"></p>
-        </header>
 
-        <!-- Anlık Sayaç Kartı -->
-        <div class="kart anlik-kart">
-            <div class="kart-baslik">🔴 ANLIK BÜKÜM SAYACI</div>
-            <div class="kart-icerik">
-                <div class="buyuk-sayi" id="anlikSayac">0</div>
-                <div class="son-islem">
-                    Son işlem: <span id="sonIslemZamani">--:--:--</span>
-                </div>
-            </div>
+    <!-- ========== BİLDİRİM ÇUBUĞU ========== -->
+    <div class="bildirim-cubugu">
+        <div class="makine-durum">
+            <span>Makine Durumu:</span>
+            <span class="durum-noktasi beklemede" id="durumNoktasi"></span>
+            <span id="durumYazisi">Bağlanıyor...</span>
+        </div>
+        <div>
+            Son Çalışma: <strong id="sonCalisma">--:--:--</strong>
+        </div>
+        <div id="canliSaat">--:--:--</div>
+    </div>
+
+    <!-- ========== ANA İÇERİK ========== -->
+    <div class="ana-konteyner">
+        
+        <!-- Başlık -->
+        <div class="baslik">
+            <h1>🏭 ABKANT PRES BÜKÜM TAKİP SİSTEMİ</h1>
+            <p class="alt-bilgi">
+                <span id="tarihGoster">---</span> | 
+                Operatör Ekranı: <strong>SAYAC: AKTIF</strong>
+            </p>
         </div>
 
-        <!-- Bugünün Toplamı Kartı -->
-        <div class="kart bugun-kart">
-            <div class="kart-baslik">📅 BUGÜN TOPLAM</div>
-            <div class="kart-icerik">
-                <div class="buyuk-sayi" id="bugunToplam">0</div>
-                <div class="tarih-detay" id="bugunTarih"></div>
+        <!-- Üst Kartlar -->
+        <div class="kart-grid">
+            <!-- Anlık Sayaç -->
+            <div class="kart">
+                <div class="kart-baslik">🔴 ANLIK BÜKÜM SAYACI</div>
+                <div class="kart-icerik">
+                    <div class="dev-sayac" id="anlikSayac">0</div>
+                    <div class="son-islem">
+                        Son İşlem: <strong id="sonIslemZamani">--:--:--</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bugün Toplam -->
+            <div class="kart">
+                <div class="kart-baslik">📅 BUGÜN TOPLAM BÜKÜM</div>
+                <div class="kart-icerik">
+                    <div class="bugun-sayac" id="bugunToplam">0</div>
+                    <div class="son-islem" id="bugunTarih"></div>
+                </div>
             </div>
         </div>
 
         <!-- Detaylı Tablo -->
         <div class="kart tablo-kart">
-            <div class="kart-baslik">📋 BUGÜNKÜ İŞLEM KAYITLARI</div>
+            <div class="kart-baslik">📋 BUGÜNKÜ İŞLEM KAYITLARI (Her Satır Bir Büküm)</div>
             <div class="tablo-kapsayici">
-                <table id="kayitTablosu">
+                <table>
                     <thead>
                         <tr>
-                            <th>Saat</th>
-                            <th>İşlem No</th>
+                            <th>🕐 Saat</th>
+                            <th>🔢 İşlem No</th>
+                            <th>⏱️ Önceki İşlemden Fark</th>
                         </tr>
                     </thead>
                     <tbody id="tabloGovde">
                         <tr>
-                            <td colspan="2">Veri bekleniyor...</td>
+                            <td colspan="3" style="text-align:center; padding:30px;">
+                                ⏳ Veri bekleniyor...<br>
+                                <small>Pedala basıldığında kayıtlar burada görünecek</small>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -55,17 +378,232 @@
         </div>
 
         <!-- Geçmiş Günler -->
-        <div class="kart gecmis-kart">
-            <div class="kart-baslik">📚 GEÇMİŞ GÜN KAYITLARI</div>
-            <div class="gun-listesi" id="gunListesi">
-                <p>Yükleniyor...</p>
+        <div class="kart">
+            <div class="kart-baslik">📚 GEÇMİŞ GÜN KAYITLARI (Tıklayınca Detay)</div>
+            <div class="gunler-grid" id="gunlerGrid">
+                <p style="grid-column:1/-1; text-align:center; color:#8899aa;">Yükleniyor...</p>
             </div>
         </div>
+
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    <script src="script.js"></script>
+    <!-- ==========================================
+           JAVASCRIPT BAŞLANGICI
+           ========================================== -->
+    <script>
+        // ========== FIREBASE AYARLARI (BURAYI KENDİNE GÖRE DEĞİŞTİR) ==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxxxxxxxxxxxxxxxxxxxxx",
+            authDomain: "abkantsayac.firebaseapp.com",
+            databaseURL: "https://abkantsayac-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "abkantsayac",
+            storageBucket: "abkantsayac.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abc123"
+        };
+        
+        // Firebase'i başlat
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // ========== HTML ELEMANLARI ==========
+        const anlikSayacElem = document.getElementById('anlikSayac');
+        const sonIslemZamaniElem = document.getElementById('sonIslemZamani');
+        const bugunToplamElem = document.getElementById('bugunToplam');
+        const bugunTarihElem = document.getElementById('bugunTarih');
+        const tabloGovde = document.getElementById('tabloGovde');
+        const gunlerGrid = document.getElementById('gunlerGrid');
+        const durumNoktasi = document.getElementById('durumNoktasi');
+        const durumYazisi = document.getElementById('durumYazisi');
+        const sonCalisma = document.getElementById('sonCalisma');
+        const canliSaatElem = document.getElementById('canliSaat');
+        const tarihGosterElem = document.getElementById('tarihGoster');
+        
+        let oncekiSayac = 0;
+        
+        // ========== YARDIMCI FONKSİYONLAR ==========
+        function bugununTarihi() {
+            const simdi = new Date();
+            const yil = simdi.getFullYear();
+            const ay = String(simdi.getMonth() + 1).padStart(2, '0');
+            const gun = String(simdi.getDate()).padStart(2, '0');
+            return `${yil}-${ay}-${gun}`;
+        }
+        
+        function canliSaatGuncelle() {
+            const simdi = new Date();
+            canliSaatElem.textContent = simdi.toLocaleTimeString('tr-TR');
+        }
+        
+        function tarihGoster() {
+            const simdi = new Date();
+            const aylar = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
+                           'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+            tarihGosterElem.textContent = 
+                `${simdi.getDate()} ${aylar[simdi.getMonth()]} ${simdi.getFullYear()}`;
+        }
+        
+        function sayacAnimasyonu(yeniDeger) {
+            if (yeniDeger !== oncekiSayac) {
+                anlikSayacElem.classList.add('degisim');
+                setTimeout(() => {
+                    anlikSayacElem.classList.remove('degisim');
+                }, 500);
+                oncekiSayac = yeniDeger;
+            }
+        }
+        
+        // ========== 1. ANLIK SAYAÇ DİNLEME ==========
+        database.ref('/sonSayac').on('value', (snapshot) => {
+            const deger = snapshot.val();
+            if (deger !== null) {
+                anlikSayacElem.textContent = deger;
+                sayacAnimasyonu(deger);
+            }
+        });
+        
+        // ========== 2. MAKİNE DURUMU DİNLEME ==========
+        database.ref('/makineDurum').on('value', (snapshot) => {
+            const durum = snapshot.val() || 'BEKLEMEDE';
+            durumYazisi.textContent = durum;
+            
+            durumNoktasi.className = 'durum-noktasi';
+            if (durum === 'CALISIYOR') {
+                durumNoktasi.classList.add('calisiyor');
+            } else if (durum === 'BEKLEMEDE') {
+                durumNoktasi.classList.add('beklemede');
+            } else {
+                durumNoktasi.classList.add('cevrimdisi');
+            }
+        });
+        
+        // ========== 3. SON ÇALIŞMA ZAMANI ==========
+        database.ref('/sonCalismaZamani').on('value', (snapshot) => {
+            const zaman = snapshot.val();
+            if (zaman) sonCalisma.textContent = zaman;
+        });
+        
+        // ========== 4. SON İŞLEM ZAMANI ==========
+        const bugun = bugununTarihi();
+        database.ref('/kayitlar/' + bugun).limitToLast(1).on('child_added', (snapshot) => {
+            sonIslemZamaniElem.textContent = snapshot.key;
+        });
+        
+        // ========== 5. BUGÜN TOPLAMI ==========
+        bugunTarihElem.textContent = 'Tarih: ' + bugun;
+        database.ref('/gunSonu/' + bugun).on('value', (snapshot) => {
+            const deger = snapshot.val();
+            bugunToplamElem.textContent = deger || '0';
+        });
+        
+        // ========== 6. BUGÜNKÜ TABLO KAYITLARI ==========
+        let sonEklenenSatir = null;
+        
+        database.ref('/kayitlar/' + bugun).on('child_added', (snapshot) => {
+            const saat = snapshot.key;
+            const islemNo = snapshot.val();
+            
+            // Önceki işlemle farkı hesapla
+            let oncekiIslemNo = 0;
+            const oncekiSatir = tabloGovde.querySelector('tr:last-child td:nth-child(2)');
+            if (oncekiSatir) {
+                const oncekiText = oncekiSatir.textContent;
+                oncekiIslemNo = parseInt(oncekiText.replace('#', '')) || 0;
+            }
+            const fark = islemNo - oncekiIslemNo;
+            const farkText = fark > 0 ? '+' + fark : String(fark);
+            
+            // "Veri bekleniyor" yazısını temizle
+            if (tabloGovde.querySelector('td[colspan]')) {
+                tabloGovde.innerHTML = '';
+            }
+            
+            const satir = document.createElement('tr');
+            satir.className = 'yeni-islem';
+            satir.innerHTML = `
+                <td><span class="zaman-damgasi">🕐 ${saat}</span></td>
+                <td><span class="islem-no">#${islemNo}</span></td>
+                <td style="color:#00d2ff; font-weight:bold;">${farkText}</td>
+            `;
+            
+            tabloGovde.appendChild(satir);
+            
+            // Otomatik scroll en alta
+            const tabloKapsayici = document.querySelector('.tablo-kapsayici');
+            tabloKapsayici.scrollTop = tabloKapsayici.scrollHeight;
+            
+            // Animasyonu 1 saniye sonra kaldır
+            setTimeout(() => {
+                satir.classList.remove('yeni-islem');
+            }, 800);
+        });
+        
+        // ========== 7. GEÇMİŞ GÜNLER ==========
+        database.ref('/gunSonu').on('value', (snapshot) => {
+            gunlerGrid.innerHTML = '';
+            const gunler = snapshot.val();
+            
+            if (gunler) {
+                const tarihler = Object.keys(gunler).sort().reverse();
+                
+                tarihler.forEach(tarih => {
+                    if (tarih === bugun) return; // Bugünü atla
+                    
+                    const gunKart = document.createElement('div');
+                    gunKart.className = 'gun-kart';
+                    gunKart.innerHTML = `
+                        <div class="gun-tarih">📅 ${tarih}</div>
+                        <div class="gun-adet">${gunler[tarih]}</div>
+                        <small style="color:#8899aa;">adet</small>
+                    `;
+                    
+                    gunKart.addEventListener('click', () => gunDetayGoster(tarih, gunler[tarih]));
+                    
+                    gunlerGrid.appendChild(gunKart);
+                });
+                
+                if (gunlerGrid.children.length === 0) {
+                    gunlerGrid.innerHTML = 
+                        '<p style="grid-column:1/-1; text-align:center; color:#8899aa;">Henüz geçmiş kayıt yok</p>';
+                }
+            }
+        });
+        
+        // ========== 8. GÜN DETAYI POPUP ==========
+        function gunDetayGoster(tarih, toplam) {
+            database.ref('/kayitlar/' + tarih).once('value').then((snapshot) => {
+                const kayitlar = snapshot.val();
+                if (kayitlar) {
+                    const saatler = Object.keys(kayitlar).sort();
+                    let mesaj = `📅 ${tarih} - Toplam: ${toplam} büküm\n\n`;
+                    mesaj += '═══════════════════\n';
+                    saatler.forEach((saat, index) => {
+                        mesaj += `🕐 ${saat}  →  #${kayitlar[saat]}\n`;
+                    });
+                    alert(mesaj);
+                } else {
+                    alert('Bu güne ait detaylı kayıt bulunamadı.');
+                }
+            });
+        }
+        
+        // ========== SAYFA YÜKLENİNCE ==========
+        window.onload = () => {
+            canliSaatGuncelle();
+            tarihGoster();
+            setInterval(canliSaatGuncelle, 1000);
+            setInterval(tarihGoster, 60000);
+        };
+        
+        // ========== BAĞLANTI DURUMU ==========
+        database.ref('.info/connected').on('value', (snapshot) => {
+            if (snapshot.val() === false) {
+                durumNoktasi.className = 'durum-noktasi cevrimdisi';
+                durumYazisi.textContent = 'BAĞLANTI YOK';
+            }
+        });
+        
+        // JAVASCRIPT SONU
+    </script>
 </body>
 </html>
