@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abkant Pres Büküm Sayacı</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Başlık -->
+        <header>
+            <h1>🏭 Abkant Pres Büküm Takip Sistemi</h1>
+            <p class="tarih" id="tarih"></p>
+        </header>
+
+        <!-- Anlık Sayaç Kartı -->
+        <div class="kart anlik-kart">
+            <div class="kart-baslik">🔴 ANLIK BÜKÜM SAYACI</div>
+            <div class="kart-icerik">
+                <div class="buyuk-sayi" id="anlikSayac">0</div>
+                <div class="son-islem">
+                    Son işlem: <span id="sonIslemZamani">--:--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bugünün Toplamı Kartı -->
+        <div class="kart bugun-kart">
+            <div class="kart-baslik">📅 BUGÜN TOPLAM</div>
+            <div class="kart-icerik">
+                <div class="buyuk-sayi" id="bugunToplam">0</div>
+                <div class="tarih-detay" id="bugunTarih"></div>
+            </div>
+        </div>
+
+        <!-- Detaylı Tablo -->
+        <div class="kart tablo-kart">
+            <div class="kart-baslik">📋 BUGÜNKÜ İŞLEM KAYITLARI</div>
+            <div class="tablo-kapsayici">
+                <table id="kayitTablosu">
+                    <thead>
+                        <tr>
+                            <th>Saat</th>
+                            <th>İşlem No</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabloGovde">
+                        <tr>
+                            <td colspan="2">Veri bekleniyor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Geçmiş Günler -->
+        <div class="kart gecmis-kart">
+            <div class="kart-baslik">📚 GEÇMİŞ GÜN KAYITLARI</div>
+            <div class="gun-listesi" id="gunListesi">
+                <p>Yükleniyor...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
