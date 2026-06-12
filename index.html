@@ -129,19 +129,26 @@
         .refresh-btn:hover {
             background: #5a67d8;
         }
+        
+        .status-online {
+            color: green;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🏭 Abkant Büküm Makinesi</h1>
-            <p>Gerçek Zamanlı Takip Sistemi</p>
+            <p>Gerçek Zamanlı Takip Sistemi - Yeni Sistem</p>
         </div>
         
         <div class="status-card">
             <h2>📊 Anlık Durum</h2>
             <div class="status-text" id="durumText">Yükleniyor...</div>
             <div class="time-info" id="zamanText"></div>
+            <div class="status-online" id="durumOnline">🟢 Sistem Aktif</div>
         </div>
         
         <div class="stats">
@@ -176,15 +183,15 @@
     </div>
 
     <script>
-        // Firebase yapılandırması
+        // YENİ Firebase yapılandırması (abkant2)
         const firebaseConfig = {
-            apiKey: "AIzaSyDQKdx1xVWC3xj2R8Q8eGgDoou_3zP3rn8",
-            authDomain: "abkant-9a6e9.firebaseapp.com",
-            databaseURL: "https://abkant-9a6e9-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "abkant-9a6e9",
-            storageBucket: "abkant-9a6e9.firebasestorage.app",
-            messagingSenderId: "1044501986885",
-            appId: "1:1044501986885:web:0e2aa3ffcb28cc7564ad2c"
+            apiKey: "AIzaSyAJg9wHKTDYq4zogqReiOs1OchC_pfZoho",
+            authDomain: "abkant2.firebaseapp.com",
+            databaseURL: "https://abkant2-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "abkant2",
+            storageBucket: "abkant2.firebasestorage.app",
+            messagingSenderId: "476690504709",
+            appId: "1:476690504709:web:4a2f0dbfa8b49ae29ad06c"
         };
 
         // Firebase'i başlat
@@ -210,6 +217,10 @@
                     
                     document.getElementById('zamanText').innerHTML = 
                         `🕐 ${data.saat || '-'} | 📅 ${data.tarih || '-'}`;
+                } else {
+                    document.getElementById('durumText').innerHTML = 'BEKLE';
+                    document.getElementById('durumText').className = 'status-text bekle';
+                    document.getElementById('zamanText').innerHTML = 'Veri bekleniyor...';
                 }
             });
         }
@@ -246,12 +257,16 @@
                 
                 if (data) {
                     const gunler = Object.keys(data).sort().reverse();
-                    for (let gun of gunler) {
-                        const row = tbody.insertRow();
-                        row.insertCell(0).innerHTML = gun;
-                        row.insertCell(1).innerHTML = data[gun].pedal || 0;
-                        row.insertCell(2).innerHTML = data[gun].inis || 0;
-                        row.insertCell(3).innerHTML = (data[gun].pedal || 0) + (data[gun].inis || 0);
+                    if (gunler.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4">Henüz kayıt yok</td></tr>';
+                    } else {
+                        for (let gun of gunler) {
+                            const row = tbody.insertRow();
+                            row.insertCell(0).innerHTML = gun;
+                            row.insertCell(1).innerHTML = data[gun].pedal || 0;
+                            row.insertCell(2).innerHTML = data[gun].inis || 0;
+                            row.insertCell(3).innerHTML = (data[gun].pedal || 0) + (data[gun].inis || 0);
+                        }
                     }
                 } else {
                     tbody.innerHTML = '<tr><td colspan="4">Henüz kayıt yok</td></tr>';
@@ -266,6 +281,9 @@
         
         // Her dakika bugünü yenile
         setInterval(loadBugun, 60000);
+        setInterval(loadHistory, 300000);
+        
+        console.log("Web sayfası başlatıldı - Firebase: abkant2");
     </script>
 </body>
 </html>
