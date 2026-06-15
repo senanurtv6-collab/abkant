@@ -141,9 +141,11 @@
             </div>
             <div style="margin-top: 20px;">
                 <table id="gecmisTablo">
-                    <thead><tr><th>Tarih</th><th>Pedal (Son)</th><th>Ekran Açılma (Son) </th><th></th></tr></thead>
+                    <thead>
+                        <tr><th>Tarih</th><th>Pedal (Son)</th><th>Ekran Açılma (Son)</th></tr>
+                    </thead>
                     <tbody id="gecmisBody">
-                        <tr><td colspan="4">Henüz kayıt yok</td></tr>
+                        <tr><td colspan="3">Henüz kayıt yok</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -198,7 +200,7 @@
                 gunlukVeri[bugun].inis = deger;
                 sonInisDegeri = deger;
                 document.getElementById('inisSayi').innerHTML = deger;
-                document.getElementById('inisDurum').innerHTML = "İNİŞ NOKTASI";
+                document.getElementById('inisDurum').innerHTML = "EKRAN AÇILDI";
                 document.getElementById('inisDurum').className = "durum inis-durum";
                 document.getElementById('inisSon').innerHTML = `Son kayıt: ${deger}`;
             }
@@ -223,10 +225,9 @@
                 row.insertCell(0).innerHTML = tarih;
                 row.insertCell(1).innerHTML = veri.pedal || 0;
                 row.insertCell(2).innerHTML = veri.inis || 0;
-                row.insertCell(3).innerHTML = (veri.pedal || 0) + (veri.inis || 0);
             }
             if (tarihler.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">Henüz kayıt yok</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3">Henüz kayıt yok</td></tr>';
             }
         }
         
@@ -236,9 +237,9 @@
             const veri = gunlukVeri[secilen];
             const tbody = document.getElementById('gecmisBody');
             if (veri) {
-                tbody.innerHTML = `<tr><td>${secilen}</td><td>${veri.pedal || 0}</td><td>${veri.inis || 0}</td><td>${(veri.pedal || 0) + (veri.inis || 0)}</td></tr>`;
+                tbody.innerHTML = `<tr><td>${secilen}</td><td>${veri.pedal || 0}</td><td>${veri.inis || 0}</td></tr>`;
             } else {
-                tbody.innerHTML = '<tr><td colspan="4">Bu tarihe ait kayıt yok</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3">Bu tarihe ait kayıt yok</td></tr>';
             }
         }
         
