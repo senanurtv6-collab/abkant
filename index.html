@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>Abkant Büküm Takip Sistemi</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -15,7 +17,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 1000px;
+            max-width: 800px;
             margin: 0 auto;
         }
         h1 {
@@ -23,361 +25,93 @@
             text-align: center;
             margin-bottom: 20px;
         }
-        .anlik-panel {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 30px;
-        }
         .kart {
             background: white;
             border-radius: 20px;
-            padding: 25px;
+            padding: 40px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 400px;
-        }
-        .kart h3 {
-            color: #666;
-            margin-bottom: 15px;
         }
         .sayi {
-            font-size: 5em;
+            font-size: 8em;
             font-weight: bold;
             color: #667eea;
         }
         .durum {
-            font-size: 1.2em;
-            padding: 10px;
+            font-size: 1.5em;
+            padding: 15px;
             border-radius: 10px;
-            margin-top: 10px;
+            margin-top: 15px;
         }
         .pedal-durum { background: #ff6b6b; color: white; }
         .bekle { background: #f0f0f0; color: #666; }
-        
-        .gecmis {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        .gecmis h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .detay {
-            background: #f9f9f9;
-            border-radius: 15px;
-            padding: 15px;
-            margin-top: 15px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .detay h4 {
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-        .detay-listesi {
-            list-style: none;
-            padding: 0;
-        }
-        .detay-listesi li {
-            padding: 8px;
-            border-bottom: 1px solid #ddd;
-            font-family: monospace;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 12px;
+        .footer {
             text-align: center;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #667eea;
             color: white;
-            cursor: pointer;
-        }
-        button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        .serial-panel {
-            background: #1e1e1e;
-            border-radius: 10px;
-            padding: 10px;
             margin-top: 20px;
-            color: #0f0;
-            font-family: monospace;
-            max-height: 150px;
-            overflow-y: auto;
         }
-        .sil-btn {
-            background: #ff6b6b;
-        }
-        .son-deger {
+        .son-guncelleme {
+            text-align: center;
+            color: white;
+            margin-bottom: 15px;
             font-size: 0.9em;
-            color: #888;
-            margin-top: 5px;
-        }
-        .tarih-secici {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .tarih-secici input {
-            padding: 10px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-            flex: 1;
-        }
-        .guncel-saat {
-            text-align: center;
-            color: white;
-            margin-bottom: 15px;
-            font-size: 1.2em;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏭 Abkant Büküm Takip Sistemi</h1>
-        <div class="guncel-saat" id="guncelSaat"></div>
+        <h1>🏭 Abkant Büküm Makinesi</h1>
+        <div class="son-guncelleme" id="sonGuncelleme">Yükleniyor...</div>
         
-        <div style="text-align: center;">
-            <button id="baglanBtn">🔌 SERIAL BAĞLAN</button>
-            <button id="temizleBtn" class="sil-btn">🗑 GEÇMİŞİ TEMİZLE</button>
+        <div class="kart">
+            <h3>🚀 PEDAL SAYACI</h3>
+            <div class="sayi" id="pedalSayi">0</div>
+            <div class="durum" id="pedalDurum">BEKLEMEDE</div>
         </div>
-        
-        <div class="anlik-panel">
-            <div class="kart">
-                <h3>🚀 PEDAL SAYACI</h3>
-                <div class="sayi" id="pedalSayi">0</div>
-                <div class="durum" id="pedalDurum">BEKLEMEDE</div>
-                <div class="son-deger" id="pedalSon">Son kayıt: -</div>
-            </div>
-        </div>
-        
-        <div class="gecmis">
-            <h3>📜 GEÇMİŞ KAYITLAR</h3>
-            <div class="tarih-secici">
-                <input type="date" id="tarihSecici">
-                <button onclick="getirGecmis()">📅 GÖSTER</button>
-            </div>
-            
-            <table id="gecmisTablo">
-                <thead>
-                    <tr><th>Tarih</th><th>Pedal Sayısı</th><th>Detay</th></tr>
-                </thead>
-                <tbody id="gecmisBody">
-                    <tr><td colspan="3">Henüz kayıt yok</td></tr>
-                </tbody>
-            </table>
-            
-            <div id="detayPanel" class="detay" style="display:none;">
-                <h4 id="detayTarih"></h4>
-                <ul id="detayListesi" class="detay-listesi"></ul>
-            </div>
-        </div>
-        
-        <div class="serial-panel" id="serialPanel">
-            <div id="serialLog">⏳ Bağlanmak için butona tıkla...</div>
+        <div class="footer">
+            Canlı Takip | Abkant Büküm Sistemi
         </div>
     </div>
 
     <script>
-        let port = null;
-        let reader = null;
-        let gunlukVeri = {};
-        
-        function updateClock() {
-            document.getElementById('guncelSaat').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-        
-        function yukleGecmis() {
-            const kayitli = localStorage.getItem('abkant_gecmis_final');
-            if (kayitli) {
-                gunlukVeri = JSON.parse(kayitli);
-                const bugun = new Date().toISOString().split('T')[0];
-                if (gunlukVeri[bugun]) {
-                    document.getElementById('pedalSayi').innerHTML = gunlukVeri[bugun].pedal || 0;
-                    document.getElementById('pedalSon').innerHTML = `Son kayıt: ${gunlukVeri[bugun].pedal || 0}`;
-                } else {
-                    // En son günün değerini göster
-                    const tarihler = Object.keys(gunlukVeri).sort().reverse();
-                    if (tarihler.length > 0) {
-                        const sonDeger = gunlukVeri[tarihler[0]].pedal || 0;
-                        document.getElementById('pedalSayi').innerHTML = sonDeger;
-                        document.getElementById('pedalSon').innerHTML = `Son kayıt: ${sonDeger} (${tarihler[0]})`;
+        // Firebase yapılandırması (kendi projenle değiştir)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-wX1t7jMkYWG_1NpbDnQsgjVc9khrIVk",
+            authDomain: "abkant3-e42bd.firebaseapp.com",
+            databaseURL: "https://abkant3-e42bd-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "abkant3-e42bd",
+            storageBucket: "abkant3-e42bd.firebasestorage.app",
+            messagingSenderId: "572801351430",
+            appId: "1:572801351430:web:c0cf32574991d48b6d2887"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let sonDeger = 0;
+
+        db.ref('/pedal').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.sayac) {
+                const deger = data.sayac;
+                sonDeger = deger;
+                document.getElementById('pedalSayi').innerHTML = deger;
+                document.getElementById('pedalDurum').innerHTML = "PEDAL BASILDI";
+                document.getElementById('pedalDurum').className = "durum pedal-durum";
+                
+                const zaman = new Date().toLocaleString('tr-TR');
+                document.getElementById('sonGuncelleme').innerHTML = `🕐 Son güncelleme: ${zaman}`;
+                
+                setTimeout(() => {
+                    if (document.getElementById('pedalSayi').innerHTML == deger) {
+                        document.getElementById('pedalDurum').innerHTML = "BEKLEMEDE";
+                        document.getElementById('pedalDurum').className = "durum bekle";
                     }
-                }
-            } else {
-                gunlukVeri = {};
+                }, 3000);
             }
-            gecmisListele();
-        }
+        });
         
-        function kaydetGecmis() {
-            localStorage.setItem('abkant_gecmis_final', JSON.stringify(gunlukVeri));
-        }
-        
-        function pedalGuncelle(deger) {
-            const now = new Date();
-            const bugun = now.toISOString().split('T')[0];
-            const saatStr = now.toLocaleTimeString('tr-TR');
-            
-            if (!gunlukVeri[bugun]) {
-                gunlukVeri[bugun] = { pedal: 0, basimlar: [] };
-            }
-            
-            // Yeni basım mı?
-            if (deger > gunlukVeri[bugun].pedal) {
-                gunlukVeri[bugun].basimlar.push({
-                    sayac: deger,
-                    saat: saatStr
-                });
-            }
-            
-            gunlukVeri[bugun].pedal = deger;
-            
-            // EKRANI GÜNCELLE
-            document.getElementById('pedalSayi').innerHTML = deger;
-            document.getElementById('pedalDurum').innerHTML = "PEDAL BASILDI";
-            document.getElementById('pedalDurum').className = "durum pedal-durum";
-            document.getElementById('pedalSon').innerHTML = `Son kayıt: ${deger} (${saatStr})`;
-            
-            kaydetGecmis();
-            gecmisListele();
-            
-            setTimeout(() => {
-                document.getElementById('pedalDurum').innerHTML = "BEKLEMEDE";
-                document.getElementById('pedalDurum').className = "durum bekle";
-            }, 2000);
-        }
-        
-        function gecmisListele() {
-            const tbody = document.getElementById('gecmisBody');
-            tbody.innerHTML = '';
-            const tarihler = Object.keys(gunlukVeri).sort().reverse();
-            for (let tarih of tarihler) {
-                const veri = gunlukVeri[tarih];
-                const row = tbody.insertRow();
-                row.insertCell(0).innerHTML = tarih;
-                row.insertCell(1).innerHTML = veri.pedal || 0;
-                const btn = document.createElement('button');
-                btn.innerHTML = '📋 Detay';
-                btn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
-                const cell = row.insertCell(2);
-                cell.appendChild(btn);
-            }
-            if (tarihler.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3">Henüz kayıt yok</td></tr>';
-            }
-        }
-        
-        function detayGoster(tarih) {
-            const veri = gunlukVeri[tarih];
-            const panel = document.getElementById('detayPanel');
-            const basimlar = veri?.basimlar || [];
-            
-            document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Toplam ${basimlar.length} basım`;
-            const liste = document.getElementById('detayListesi');
-            liste.innerHTML = '';
-            
-            if (basimlar.length === 0) {
-                liste.innerHTML = '<li>Bu güne ait basım kaydı yok</li>';
-            } else {
-                for (let b of basimlar) {
-                    const li = document.createElement('li');
-                    li.innerHTML = `🕐 ${b.saat} - ${b.sayac}. basım`;
-                    liste.appendChild(li);
-                }
-            }
-            panel.style.display = 'block';
-            panel.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function getirGecmis() {
-            const secilen = document.getElementById('tarihSecici').value;
-            if (secilen) detayGoster(secilen);
-        }
-        
-        document.getElementById('tarihSecici').value = new Date().toISOString().split('T')[0];
-        
-        async function baglan() {
-            try {
-                port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 115200 });
-                document.getElementById('serialLog').innerHTML = '✅ Bağlandı! Veriler alınıyor...\n';
-                yukleGecmis();  // Bağlanınca son değeri göster
-                reader = port.readable.getReader();
-                serialOku();
-            } catch (err) {
-                document.getElementById('serialLog').innerHTML = '❌ Hata: ' + err.message + '\n';
-            }
-        }
-        
-        async function serialOku() {
-            let buffer = "";
-            try {
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    buffer += new TextDecoder().decode(value);
-                    let lines = buffer.split('\n');
-                    buffer = lines.pop();
-                    
-                    for (let line of lines) {
-                        line = line.trim();
-                        if (line.startsWith('{') && line.endsWith('}')) {
-                            try {
-                                const veri = JSON.parse(line);
-                                document.getElementById('serialLog').innerHTML += '📡 ' + line + '\n';
-                                document.getElementById('serialLog').scrollTop = document.getElementById('serialLog').scrollHeight;
-                                
-                                if (veri.type === 'pedal') {
-                                    pedalGuncelle(veri.value);
-                                }
-                            } catch(e) {}
-                        }
-                    }
-                }
-            } catch (err) {
-                document.getElementById('serialLog').innerHTML += '❌ Okuma hatası\n';
-            }
-        }
-        
-        function temizleGecmis() {
-            if (confirm('Tüm geçmiş kayıtlar silinecek. Devam et?')) {
-                localStorage.removeItem('abkant_gecmis_final');
-                gunlukVeri = {};
-                gecmisListele();
-                document.getElementById('serialLog').innerHTML += '🗑 Geçmiş kayıtlar silindi.\n';
-                document.getElementById('pedalSayi').innerHTML = '0';
-                document.getElementById('pedalSon').innerHTML = 'Son kayıt: -';
-                document.getElementById('detayPanel').style.display = 'none';
-            }
-        }
-        
-        document.getElementById('baglanBtn').addEventListener('click', baglan);
-        document.getElementById('temizleBtn').addEventListener('click', temizleGecmis);
-        
-        if (!("serial" in navigator)) {
-            document.getElementById('baglanBtn').disabled = true;
-            document.getElementById('serialLog').innerHTML = '❌ Web Serial desteklenmiyor. Chrome kullanın.\n';
-        }
-        
-        yukleGecmis();
+        document.getElementById('sonGuncelleme').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')} - Firebase bağlandı`;
     </script>
 </body>
 </html>
