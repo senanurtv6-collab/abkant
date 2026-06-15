@@ -86,9 +86,6 @@
             border-bottom: 1px solid #ddd;
             font-family: monospace;
         }
-        .detay-listesi li:nth-child(even) {
-            background: #f0f0f0;
-        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -102,9 +99,6 @@
             background: #667eea;
             color: white;
             cursor: pointer;
-        }
-        th:hover {
-            background: #5a67d8;
         }
         button {
             background: #667eea;
@@ -181,11 +175,7 @@
             
             <table id="gecmisTablo">
                 <thead>
-                    <tr>
-                        <th onclick="siralaByTarih()">Tarih 📅</th>
-                        <th>Pedal Sayısı</th>
-                        <th>📋 Detay</th>
-                    </tr>
+                    <tr><th>Tarih</th><th>Pedal Sayısı</th><th>Detay</th></tr>
                 </thead>
                 <tbody id="gecmisBody">
                     <tr><td colspan="3">Henüz kayıt yok</td></tr>
@@ -199,7 +189,7 @@
         </div>
         
         <div class="serial-panel" id="serialPanel">
-            <div id="serialLog">⏳ Bağlanmak için yukarıdaki butona tıkla...</div>
+            <div id="serialLog">⏳ Bağlanmak için butona tıkla...</div>
         </div>
     </div>
 
@@ -207,70 +197,60 @@
         let port = null;
         let reader = null;
         let gunlukVeri = {};
-        let sonPedalDegeri = 0;
         
-        // Canlı saat gösterimi
         function updateClock() {
-            const now = new Date();
-            document.getElementById('guncelSaat').innerHTML = `🕐 ${now.toLocaleString('tr-TR')}`;
+            document.getElementById('guncelSaat').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
         }
         setInterval(updateClock, 1000);
         updateClock();
         
         function yukleGecmis() {
-            const kayitli = localStorage.getItem('abkant_gecmis_v6');
+            const kayitli = localStorage.getItem('abkant_gecmis_final');
             if (kayitli) {
                 gunlukVeri = JSON.parse(kayitli);
-                // SON DEĞERİ GÖSTER
                 const bugun = new Date().toISOString().split('T')[0];
-                if (gunlukVeri[bugun] && gunlukVeri[bugun].pedal) {
-                    sonPedalDegeri = gunlukVeri[bugun].pedal;
-                    document.getElementById('pedalSayi').innerHTML = sonPedalDegeri;
-                    document.getElementById('pedalSon').innerHTML = `Son kayıt: ${sonPedalDegeri}`;
+                if (gunlukVeri[bugun]) {
+                    document.getElementById('pedalSayi').innerHTML = gunlukVeri[bugun].pedal || 0;
+                    document.getElementById('pedalSon').innerHTML = `Son kayıt: ${gunlukVeri[bugun].pedal || 0}`;
                 } else {
-                    // Başka bir günün son değerini bul (en son gün)
+                    // En son günün değerini göster
                     const tarihler = Object.keys(gunlukVeri).sort().reverse();
                     if (tarihler.length > 0) {
-                        const sonGun = tarihler[0];
-                        sonPedalDegeri = gunlukVeri[sonGun].pedal || 0;
-                        document.getElementById('pedalSayi').innerHTML = sonPedalDegeri;
-                        document.getElementById('pedalSon').innerHTML = `Son kayıt: ${sonPedalDegeri} (${sonGun})`;
+                        const sonDeger = gunlukVeri[tarihler[0]].pedal || 0;
+                        document.getElementById('pedalSayi').innerHTML = sonDeger;
+                        document.getElementById('pedalSon').innerHTML = `Son kayıt: ${sonDeger} (${tarihler[0]})`;
                     }
                 }
             } else {
                 gunlukVeri = {};
-                document.getElementById('pedalSayi').innerHTML = '0';
-                document.getElementById('pedalSon').innerHTML = 'Son kayıt: -';
             }
             gecmisListele();
         }
         
         function kaydetGecmis() {
-            localStorage.setItem('abkant_gecmis_v6', JSON.stringify(gunlukVeri));
+            localStorage.setItem('abkant_gecmis_final', JSON.stringify(gunlukVeri));
         }
         
-        function veriGuncelle(deger, simdikiZaman = null) {
-            const now = simdikiZaman ? new Date(simdikiZaman) : new Date();
+        function pedalGuncelle(deger) {
+            const now = new Date();
             const bugun = now.toISOString().split('T')[0];
-            const saatStr = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const saatStr = now.toLocaleTimeString('tr-TR');
             
             if (!gunlukVeri[bugun]) {
                 gunlukVeri[bugun] = { pedal: 0, basimlar: [] };
             }
             
-            // Sadece yeni basım ise (değer arttıysa) kaydet
-            if (deger > (gunlukVeri[bugun].pedal || 0)) {
+            // Yeni basım mı?
+            if (deger > gunlukVeri[bugun].pedal) {
                 gunlukVeri[bugun].basimlar.push({
                     sayac: deger,
-                    saat: saatStr,
-                    tamZaman: now.toISOString()
+                    saat: saatStr
                 });
             }
             
             gunlukVeri[bugun].pedal = deger;
-            sonPedalDegeri = deger;
             
-            // EKRANI GÜNCELLE - BURASI ÇOK ÖNEMLİ!
+            // EKRANI GÜNCELLE
             document.getElementById('pedalSayi').innerHTML = deger;
             document.getElementById('pedalDurum').innerHTML = "PEDAL BASILDI";
             document.getElementById('pedalDurum').className = "durum pedal-durum";
@@ -280,10 +260,8 @@
             gecmisListele();
             
             setTimeout(() => {
-                if (document.getElementById('pedalDurum').innerHTML === "PEDAL BASILDI") {
-                    document.getElementById('pedalDurum').innerHTML = "BEKLEMEDE";
-                    document.getElementById('pedalDurum').className = "durum bekle";
-                }
+                document.getElementById('pedalDurum').innerHTML = "BEKLEMEDE";
+                document.getElementById('pedalDurum').className = "durum bekle";
             }, 2000);
         }
         
@@ -296,11 +274,11 @@
                 const row = tbody.insertRow();
                 row.insertCell(0).innerHTML = tarih;
                 row.insertCell(1).innerHTML = veri.pedal || 0;
-                const detayBtn = document.createElement('button');
-                detayBtn.innerHTML = '📋 Detay';
-                detayBtn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
-                const huc = row.insertCell(2);
-                huc.appendChild(detayBtn);
+                const btn = document.createElement('button');
+                btn.innerHTML = '📋 Detay';
+                btn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
+                const cell = row.insertCell(2);
+                cell.appendChild(btn);
             }
             if (tarihler.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3">Henüz kayıt yok</td></tr>';
@@ -331,35 +309,17 @@
         
         function getirGecmis() {
             const secilen = document.getElementById('tarihSecici').value;
-            if (!secilen) return;
-            detayGoster(secilen);
+            if (secilen) detayGoster(secilen);
         }
         
-        function siralaByTarih() {
-            const tbody = document.getElementById('gecmisBody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            rows.sort((a, b) => {
-                const tarihA = a.cells[0].innerText;
-                const tarihB = b.cells[0].innerText;
-                return tarihB.localeCompare(tarihA);
-            });
-            tbody.innerHTML = '';
-            rows.forEach(row => tbody.appendChild(row));
-        }
-        
-        const bugun = new Date().toISOString().split('T')[0];
-        document.getElementById('tarihSecici').value = bugun;
+        document.getElementById('tarihSecici').value = new Date().toISOString().split('T')[0];
         
         async function baglan() {
             try {
                 port = await navigator.serial.requestPort();
                 await port.open({ baudRate: 115200 });
-                const logElem = document.getElementById('serialLog');
-                logElem.innerHTML = '✅ Bağlandı! Veriler alınıyor...\n';
-                
-                // Bağlanınca son değeri göster
-                yukleGecmis();
-                
+                document.getElementById('serialLog').innerHTML = '✅ Bağlandı! Veriler alınıyor...\n';
+                yukleGecmis();  // Bağlanınca son değeri göster
                 reader = port.readable.getReader();
                 serialOku();
             } catch (err) {
@@ -373,7 +333,6 @@
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    
                     buffer += new TextDecoder().decode(value);
                     let lines = buffer.split('\n');
                     buffer = lines.pop();
@@ -383,20 +342,13 @@
                         if (line.startsWith('{') && line.endsWith('}')) {
                             try {
                                 const veri = JSON.parse(line);
-                                const logElem = document.getElementById('serialLog');
-                                logElem.innerHTML += '📡 ' + line + '\n';
-                                logElem.scrollTop = logElem.scrollHeight;
+                                document.getElementById('serialLog').innerHTML += '📡 ' + line + '\n';
+                                document.getElementById('serialLog').scrollTop = document.getElementById('serialLog').scrollHeight;
                                 
                                 if (veri.type === 'pedal') {
-                                    veriGuncelle(veri.value);
+                                    pedalGuncelle(veri.value);
                                 }
                             } catch(e) {}
-                        } else if (line.startsWith('Pedal:')) {
-                            // Eski format için
-                            const match = line.match(/Pedal:\s*(\d+)/);
-                            if (match) {
-                                veriGuncelle(parseInt(match[1]));
-                            }
                         }
                     }
                 }
@@ -407,9 +359,8 @@
         
         function temizleGecmis() {
             if (confirm('Tüm geçmiş kayıtlar silinecek. Devam et?')) {
-                localStorage.removeItem('abkant_gecmis_v6');
+                localStorage.removeItem('abkant_gecmis_final');
                 gunlukVeri = {};
-                sonPedalDegeri = 0;
                 gecmisListele();
                 document.getElementById('serialLog').innerHTML += '🗑 Geçmiş kayıtlar silindi.\n';
                 document.getElementById('pedalSayi').innerHTML = '0';
