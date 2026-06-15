@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>Abkant Büküm Takip Sistemi</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -100,11 +102,6 @@
         .sil-btn {
             background: #ff6b6b;
         }
-        .durum-text {
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: #666;
-        }
         .son-deger {
             font-size: 0.9em;
             color: #888;
@@ -137,14 +134,14 @@
         </div>
         
         <div class="gecmis">
-            <h3>📜 GEÇMİŞ KAYITLAR (Tarayıcıda Saklanır)</h3>
+            <h3>📜 GEÇMİŞ KAYITLAR (Günlük Son Sayılar)</h3>
             <div>
                 <input type="date" id="tarihSecici">
                 <button onclick="getirGecmis()">📅 GÖSTER</button>
             </div>
             <div style="margin-top: 20px;">
                 <table id="gecmisTablo">
-                    <thead><tr><th>Tarih</th><th>Pedal</th><th>İniş</th><th>Toplam</th></tr></thead>
+                    <thead><tr><th>Tarih</th><th>Pedal (Son)</th><th>İniş (Son)</th><th>Toplam</th></tr></thead>
                     <tbody id="gecmisBody">
                         <tr><td colspan="4">Henüz kayıt yok</td></tr>
                     </tbody>
@@ -165,18 +162,15 @@
         let sonInisDegeri = 0;
         
         function yukleGecmis() {
-            const kayitli = localStorage.getItem('abkant_gecmis');
+            const kayitli = localStorage.getItem('abkant_gecmis_v2');
             if (kayitli) {
                 gunlukVeri = JSON.parse(kayitli);
-                // Son değerleri göster
                 const bugun = new Date().toISOString().split('T')[0];
                 if (gunlukVeri[bugun]) {
                     sonPedalDegeri = gunlukVeri[bugun].pedal || 0;
                     sonInisDegeri = gunlukVeri[bugun].inis || 0;
                     document.getElementById('pedalSayi').innerHTML = sonPedalDegeri;
                     document.getElementById('inisSayi').innerHTML = sonInisDegeri;
-                    document.getElementById('pedalSon').innerHTML = `Son kayıt: ${sonPedalDegeri}`;
-                    document.getElementById('inisSon').innerHTML = `Son kayıt: ${sonInisDegeri}`;
                 }
             } else {
                 gunlukVeri = {};
@@ -185,7 +179,7 @@
         }
         
         function kaydetGecmis() {
-            localStorage.setItem('abkant_gecmis', JSON.stringify(gunlukVeri));
+            localStorage.setItem('abkant_gecmis_v2', JSON.stringify(gunlukVeri));
         }
         
         function veriGuncelle(tur, deger) {
@@ -256,7 +250,7 @@
                 port = await navigator.serial.requestPort();
                 await port.open({ baudRate: 115200 });
                 const logElem = document.getElementById('serialLog');
-                logElem.innerHTML = '✅ Bağlandı! Son veriler alınıyor...\n';
+                logElem.innerHTML = '✅ Bağlandı! Geçmiş veriler alınıyor...\n';
                 
                 reader = port.readable.getReader();
                 serialOku();
@@ -301,14 +295,12 @@
         
         function temizleGecmis() {
             if (confirm('Tüm geçmiş kayıtlar silinecek. Devam et?')) {
-                localStorage.removeItem('abkant_gecmis');
+                localStorage.removeItem('abkant_gecmis_v2');
                 gunlukVeri = {};
                 gecmisListele();
                 document.getElementById('serialLog').innerHTML += '🗑 Geçmiş kayıtlar silindi.\n';
                 document.getElementById('pedalSayi').innerHTML = '0';
                 document.getElementById('inisSayi').innerHTML = '0';
-                sonPedalDegeri = 0;
-                sonInisDegeri = 0;
             }
         }
         
