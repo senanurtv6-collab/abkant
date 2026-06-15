@@ -5,76 +5,83 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: white;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .kart {
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: white; text-align: center; margin-bottom: 20px; }
+        .anlik {
             background: white;
             border-radius: 20px;
-            padding: 40px;
+            padding: 30px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
         }
-        .sayi {
-            font-size: 8em;
-            font-weight: bold;
-            color: #667eea;
+        .sayi { font-size: 6em; font-weight: bold; color: #667eea; }
+        .zaman { color: #666; margin-top: 10px; }
+        .pedal { background: #ff6b6b; color: white; border-radius: 10px; padding: 10px; margin-top: 10px; }
+        
+        .ozet {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
-        .durum {
-            font-size: 1.5em;
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
+        th { background: #667eea; color: white; cursor: pointer; }
+        button {
+            background: #667eea; color: white; border: none;
+            padding: 5px 15px; border-radius: 10px; cursor: pointer;
+        }
+        .detay {
+            background: #f9f9f9;
+            border-radius: 15px;
             padding: 15px;
-            border-radius: 10px;
             margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
         }
-        .pedal-durum { background: #ff6b6b; color: white; }
-        .bekle { background: #f0f0f0; color: #666; }
-        .footer {
-            text-align: center;
-            color: white;
-            margin-top: 20px;
-        }
-        .son-guncelleme {
-            text-align: center;
-            color: white;
-            margin-bottom: 15px;
-            font-size: 0.9em;
-        }
+        .detay-listesi { list-style: none; padding: 0; }
+        .detay-listesi li { padding: 8px; border-bottom: 1px solid #ddd; font-family: monospace; }
+        .tarih-secici { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+        .tarih-secici input { padding: 10px; border-radius: 10px; border: 1px solid #ddd; flex: 1; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏭 Abkant Büküm Makinesi</h1>
-        <div class="son-guncelleme" id="sonGuncelleme">Yükleniyor...</div>
         
-        <div class="kart">
-            <h3>🚀 PEDAL SAYACI</h3>
-            <div class="sayi" id="pedalSayi">0</div>
-            <div class="durum" id="pedalDurum">BEKLEMEDE</div>
+        <div class="anlik">
+            <h3>🚀 ANLIK PEDAL SAYACI</h3>
+            <div class="sayi" id="anlikSayac">0</div>
+            <div class="zaman" id="anlikZaman">Yükleniyor...</div>
+            <div class="pedal" id="anlikDurum">BEKLEMEDE</div>
         </div>
-        <div class="footer">
-            Canlı Takip | Abkant Büküm Sistemi
+        
+        <div class="ozet">
+            <h3>📊 GÜNLÜK ÖZET</h3>
+            <div class="tarih-secici">
+                <input type="date" id="tarihSecici">
+                <button onclick="getirOzet()">📅 GÖSTER</button>
+            </div>
+            <table id="ozetTablo">
+                <thead><tr><th>Tarih</th><th>Toplam Pedal</th><th>Detay</th></tr></thead>
+                <tbody id="ozetBody"><tr><td colspan="3">Yükleniyor...</td></tr></tbody>
+            </table>
+        </div>
+        
+        <div id="detayPanel" class="detay" style="display:none;">
+            <h4 id="detayTarih"></h4>
+            <ul id="detayListesi" class="detay-listesi"></ul>
         </div>
     </div>
 
     <script>
-        // Firebase yapılandırması (kendi projenle değiştir)
         const firebaseConfig = {
             apiKey: "AIzaSyD-wX1t7jMkYWG_1NpbDnQsgjVc9khrIVk",
             authDomain: "abkant3-e42bd.firebaseapp.com",
@@ -84,34 +91,81 @@
             messagingSenderId: "572801351430",
             appId: "1:572801351430:web:c0cf32574991d48b6d2887"
         };
-
+        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
-        let sonDeger = 0;
-
-        db.ref('/pedal').on('value', (snapshot) => {
+        
+        // Anlık veri dinle
+        db.ref('/anlik').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data && data.sayac) {
-                const deger = data.sayac;
-                sonDeger = deger;
-                document.getElementById('pedalSayi').innerHTML = deger;
-                document.getElementById('pedalDurum').innerHTML = "PEDAL BASILDI";
-                document.getElementById('pedalDurum').className = "durum pedal-durum";
-                
-                const zaman = new Date().toLocaleString('tr-TR');
-                document.getElementById('sonGuncelleme').innerHTML = `🕐 Son güncelleme: ${zaman}`;
-                
-                setTimeout(() => {
-                    if (document.getElementById('pedalSayi').innerHTML == deger) {
-                        document.getElementById('pedalDurum').innerHTML = "BEKLEMEDE";
-                        document.getElementById('pedalDurum').className = "durum bekle";
-                    }
-                }, 3000);
+            if (data) {
+                document.getElementById('anlikSayac').innerHTML = data.sayac || 0;
+                document.getElementById('anlikZaman').innerHTML = `🕐 ${data.zaman || '-'} | 📅 ${data.tarih || '-'}`;
+                document.getElementById('anlikDurum').innerHTML = data.sayac > 0 ? "✅ PEDAL BASILDI" : "⏳ BEKLEMEDE";
             }
         });
         
-        document.getElementById('sonGuncelleme').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')} - Firebase bağlandı`;
+        // Özet listele
+        function ozetListele() {
+            const ozetRef = db.ref('/gunluk');
+            ozetRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                const tbody = document.getElementById('ozetBody');
+                tbody.innerHTML = '';
+                
+                if (data) {
+                    const tarihler = Object.keys(data).sort().reverse();
+                    for (let tarih of tarihler) {
+                        const toplam = data[tarih].toplam?.sayac || 0;
+                        const row = tbody.insertRow();
+                        row.insertCell(0).innerHTML = tarih;
+                        row.insertCell(1).innerHTML = toplam;
+                        const btn = document.createElement('button');
+                        btn.innerHTML = '📋 Detay';
+                        btn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
+                        const cell = row.insertCell(2);
+                        cell.appendChild(btn);
+                    }
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3">Henüz kayıt yok</td></tr>';
+                }
+            });
+        }
+        
+        // Detay göster
+        function detayGoster(tarih) {
+            const basimlarRef = db.ref(`/gunluk/${tarih}/basimlar`);
+            basimlarRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                const panel = document.getElementById('detayPanel');
+                const liste = document.getElementById('detayListesi');
+                
+                document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Basım Detayları`;
+                liste.innerHTML = '';
+                
+                if (data) {
+                    const basimlar = Object.values(data);
+                    basimlar.sort((a, b) => a.sayac - b.sayac);
+                    for (let b of basimlar) {
+                        const li = document.createElement('li');
+                        li.innerHTML = `🕐 ${b.saat} - ${b.sayac}. basım`;
+                        liste.appendChild(li);
+                    }
+                } else {
+                    liste.innerHTML = '<li>Bu güne ait basım kaydı yok</li>';
+                }
+                panel.style.display = 'block';
+                panel.scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+        
+        function getirOzet() {
+            const secilen = document.getElementById('tarihSecici').value;
+            if (secilen) detayGoster(secilen);
+        }
+        
+        document.getElementById('tarihSecici').value = new Date().toISOString().split('T')[0];
+        ozetListele();
     </script>
 </body>
 </html>
