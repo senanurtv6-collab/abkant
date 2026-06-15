@@ -1,9 +1,7 @@
-1<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Abkant Büküm Takip Sistemi</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -40,11 +38,42 @@
         .inis { background: #4ecdc4; color: white; }
         .bekle { background: #f0f0f0; color: #666; }
         h1 { color: white; text-align: center; margin-bottom: 20px; }
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 0.8em;
+        }
+        button {
+            background: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        button:hover {
+            transform: scale(1.05);
+            transition: 0.3s;
+        }
+        .baglanti-durum {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <h1>🏭 Abkant Büküm Takip Sistemi</h1>
     <div class="container">
+        <div style="text-align: center;">
+            <button id="baglanBtn">🔌 BAĞLAN</button>
+        </div>
+        <div class="baglanti-durum" id="durum">Bağlı değil</div>
+        
         <div class="kart">
             <h2>🚀 PEDAL SAYACI</h2>
             <div class="sayi" id="pedalSayi">0</div>
@@ -56,37 +85,81 @@
             <div class="durum" id="inisDurum">BEKLEMEDE</div>
         </div>
     </div>
+    <div class="footer">
+        Gerçek Zamanlı Takip | Abkant Büküm Makinesi
+    </div>
 
     <script>
-        // YENİ FIREBASE YAPILANDIRMASI (abkant3)
-        const firebaseConfig = {
-            apiKey: "AIzaSyD-wX1t7jMkYWG_1NpbDnQsgjVc9khrIVk",
-            authDomain: "abkant3-e42bd.firebaseapp.com",
-            databaseURL: "https://abkant3-e42bd-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "abkant3-e42bd",
-            storageBucket: "abkant3-e42bd.firebasestorage.app",
-            messagingSenderId: "572801351430",
-            appId: "1:572801351430:web:c0cf32574991d48b6d2887"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        // Pedal sayacını dinle
-        db.ref('/pedal_sayac').on('value', (snapshot) => {
-            const deger = snapshot.val() || 0;
-            document.getElementById('pedalSayi').innerHTML = deger;
-            document.getElementById('pedalDurum').innerHTML = deger > 0 ? "PEDAL BASILDI" : "BEKLEMEDE";
-            document.getElementById('pedalDurum').className = "durum " + (deger > 0 ? "pedal" : "bekle");
-        });
-
-        // İniş sayacını dinle
-        db.ref('/inis_sayac').on('value', (snapshot) => {
-            const deger = snapshot.val() || 0;
-            document.getElementById('inisSayi').innerHTML = deger;
-            document.getElementById('inisDurum').innerHTML = deger > 0 ? "İNİŞ NOKTASI" : "BEKLEMEDE";
-            document.getElementById('inisDurum').className = "durum " + (deger > 0 ? "inis" : "bekle");
-        });
+        let port = null;
+        let reader = null;
+        let pedalDegeri = 0;
+        let inisDegeri = 0;
+        
+        const pedalSayiElem = document.getElementById('pedalSayi');
+        const inisSayiElem = document.getElementById('inisSayi');
+        const pedalDurumElem = document.getElementById('pedalDurum');
+        const inisDurumElem = document.getElementById('inisDurum');
+        const durumElem = document.getElementById('durum');
+        
+        async function baglan() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                durumElem.innerHTML = "✅ Bağlandı! Sensör verileri bekleniyor...";
+                durumElem.style.color = "lightgreen";
+                document.getElementById('baglanBtn').style.display = "none";
+                
+                reader = port.readable.getReader();
+                oku();
+            } catch (err) {
+                durumElem.innerHTML = "❌ Bağlantı hatası: " + err.message;
+                durumElem.style.color = "red";
+            }
+        }
+        
+        async function oku() {
+            let buffer = "";
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += new TextDecoder().decode(value);
+                    let lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (line.startsWith('{') && line.endsWith('}')) {
+                            try {
+                                const veri = JSON.parse(line);
+                                if (veri.type === 'pedal') {
+                                    pedalDegeri = veri.value;
+                                    pedalSayiElem.innerHTML = pedalDegeri;
+                                    pedalDurumElem.innerHTML = pedalDegeri > 0 ? "✅ PEDAL BASILDI" : "BEKLEMEDE";
+                                    pedalDurumElem.className = "durum " + (pedalDegeri > 0 ? "pedal" : "bekle");
+                                } else if (veri.type === 'inis') {
+                                    inisDegeri = veri.value;
+                                    inisSayiElem.innerHTML = inisDegeri;
+                                    inisDurumElem.innerHTML = inisDegeri > 0 ? "📍 İNİŞ NOKTASI" : "BEKLEMEDE";
+                                    inisDurumElem.className = "durum " + (inisDegeri > 0 ? "inis" : "bekle");
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                }
+            } catch (err) {
+                durumElem.innerHTML = "❌ Okuma hatası: " + err.message;
+            }
+        }
+        
+        document.getElementById('baglanBtn').addEventListener('click', baglan);
+        
+        if (!("serial" in navigator)) {
+            durumElem.innerHTML = "❌ Tarayıcınız Web Serial API'yi desteklemiyor. Chrome kullanın.";
+            durumElem.style.color = "red";
+            document.getElementById('baglanBtn').disabled = true;
+        }
     </script>
 </body>
 </html>
