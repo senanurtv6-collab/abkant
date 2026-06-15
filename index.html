@@ -6,7 +6,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -39,7 +39,7 @@
         .pedal { background: #ff6b6b; color: white; }
         .inis { background: #4ecdc4; color: white; }
         .bekle { background: #f0f0f0; color: #666; }
-        h1 { color: white; text-align: center; }
+        h1 { color: white; text-align: center; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -58,25 +58,34 @@
     </div>
 
     <script>
-const firebaseConfig = {
-  apiKey: "Buraya Web App'ten aldığın apiKey'i yaz",
-  authDomain: "abkant3.firebaseapp.com",
-  databaseURL: "https://abkant3-default-rtdb.europe-west3.firebasedatabase.app",
-  projectId: "abkant3",
-  storageBucket: "abkant3.firebasestorage.app",
-  messagingSenderId: "Buraya Web App'ten aldığın Sender ID'yi yaz",
-  appId: "Buraya Web App'ten aldığın App ID'yi yaz"
-};
+        // YENİ FIREBASE YAPILANDIRMASI (abkant3)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-wX1t7jMkYWG_1NpbDnQsgjVc9khrIVk",
+            authDomain: "abkant3-e42bd.firebaseapp.com",
+            databaseURL: "https://abkant3-e42bd-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "abkant3-e42bd",
+            storageBucket: "abkant3-e42bd.firebasestorage.app",
+            messagingSenderId: "572801351430",
+            appId: "1:572801351430:web:c0cf32574991d48b6d2887"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // Pedal sayacını dinle
         db.ref('/pedal_sayac').on('value', (snapshot) => {
-            document.getElementById('pedalSayi').innerHTML = snapshot.val() || 0;
+            const deger = snapshot.val() || 0;
+            document.getElementById('pedalSayi').innerHTML = deger;
+            document.getElementById('pedalDurum').innerHTML = deger > 0 ? "PEDAL BASILDI" : "BEKLEMEDE";
+            document.getElementById('pedalDurum').className = "durum " + (deger > 0 ? "pedal" : "bekle");
         });
 
+        // İniş sayacını dinle
         db.ref('/inis_sayac').on('value', (snapshot) => {
-            document.getElementById('inisSayi').innerHTML = snapshot.val() || 0;
+            const deger = snapshot.val() || 0;
+            document.getElementById('inisSayi').innerHTML = deger;
+            document.getElementById('inisDurum').innerHTML = deger > 0 ? "İNİŞ NOKTASI" : "BEKLEMEDE";
+            document.getElementById('inisDurum').className = "durum " + (deger > 0 ? "inis" : "bekle");
         });
     </script>
 </body>
