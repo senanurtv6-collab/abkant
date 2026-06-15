@@ -2,122 +2,251 @@
 <html>
 <head>
     <title>Abkant Büküm Takip Sistemi</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            margin: 0;
         }
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .anlik-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
         .kart {
             background: white;
             border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 20px;
+            padding: 25px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
+        .kart h3 {
+            color: #666;
+            margin-bottom: 15px;
+        }
         .sayi {
-            font-size: 5em;
+            font-size: 4em;
             font-weight: bold;
             color: #667eea;
-            margin: 20px 0;
         }
         .durum {
-            font-size: 1.5em;
+            font-size: 1.2em;
             padding: 10px;
             border-radius: 10px;
-            margin: 10px 0;
+            margin-top: 10px;
         }
-        .pedal { background: #ff6b6b; color: white; }
-        .inis { background: #4ecdc4; color: white; }
+        .pedal-durum { background: #ff6b6b; color: white; }
+        .inis-durum { background: #4ecdc4; color: white; }
         .bekle { background: #f0f0f0; color: #666; }
-        h1 { color: white; text-align: center; margin-bottom: 20px; }
-        .footer {
-            text-align: center;
-            color: white;
+        
+        .gecmis {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
             margin-top: 20px;
-            font-size: 0.8em;
         }
-        button {
+        .gecmis h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .tarih-secici {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .tarih-secici input {
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            flex: 1;
+        }
+        .tarih-secici button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #667eea;
+            color: white;
+        }
+        .secili-tarih {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .baglanti-buton {
             background: white;
             border: none;
-            padding: 15px 30px;
-            font-size: 1.2em;
+            padding: 10px 20px;
             border-radius: 30px;
             cursor: pointer;
             margin-bottom: 20px;
             font-weight: bold;
             color: #667eea;
         }
-        button:hover {
-            transform: scale(1.05);
-            transition: 0.3s;
-        }
-        .baglanti-durum {
-            color: white;
-            text-align: center;
-            margin-bottom: 20px;
+        .serial-panel {
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 20px;
+            color: #0f0;
+            font-family: monospace;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>🏭 Abkant Büküm Takip Sistemi</h1>
     <div class="container">
-        <div style="text-align: center;">
-            <button id="baglanBtn">🔌 BAĞLAN</button>
-        </div>
-        <div class="baglanti-durum" id="durum">Bağlı değil</div>
+        <h1>🏭 Abkant Büküm Takip Sistemi</h1>
         
-        <div class="kart">
-            <h2>🚀 PEDAL SAYACI</h2>
-            <div class="sayi" id="pedalSayi">0</div>
-            <div class="durum" id="pedalDurum">BEKLEMEDE</div>
+        <div style="text-align: center;">
+            <button class="baglanti-buton" id="serialBtn">🔌 SERIAL BAĞLAN</button>
+            <button class="baglanti-buton" id="firebaseBtn">🔥 FIREBASE BAĞLAN</button>
         </div>
-        <div class="kart">
-            <h2>📍 İNİŞ SAYACI</h2>
-            <div class="sayi" id="inisSayi">0</div>
-            <div class="durum" id="inisDurum">BEKLEMEDE</div>
+        
+        <div class="anlik-panel">
+            <div class="kart">
+                <h3>🚀 PEDAL SAYACI</h3>
+                <div class="sayi" id="pedalSayi">0</div>
+                <div class="durum" id="pedalDurum">BEKLEMEDE</div>
+            </div>
+            <div class="kart">
+                <h3>📍 İNİŞ SAYACI</h3>
+                <div class="sayi" id="inisSayi">0</div>
+                <div class="durum" id="inisDurum">BEKLEMEDE</div>
+            </div>
         </div>
-    </div>
-    <div class="footer">
-        Gerçek Zamanlı Takip | Abkant Büküm Makinesi
+        
+        <div class="gecmis">
+            <h3>📜 GEÇMİŞ KAYITLAR (Firebase)</h3>
+            <div class="tarih-secici">
+                <input type="date" id="tarihSecici">
+                <button onclick="getirGecmis()">Getir</button>
+            </div>
+            <div class="secili-tarih" id="seciliTarih">Tarih seçiniz</div>
+            <div style="margin-top: 20px;">
+                <table id="gecmisTablo">
+                    <thead><tr><th>Pedal Sayısı</th><th>İniş Sayısı</th><th>Toplam</th></tr></thead>
+                    <tbody id="gecmisBody"><tr><td colspan="3">Tarih seçiniz...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="serial-panel" id="serialPanel">
+            <div id="serialLog"></div>
+        </div>
     </div>
 
     <script>
+        // ============ FIREBASE ============
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-wX1t7jMkYWG_1NpbDnQsgjVc9khrIVk",
+            authDomain: "abkant3-e42bd.firebaseapp.com",
+            databaseURL: "https://abkant3-e42bd-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "abkant3-e42bd",
+            storageBucket: "abkant3-e42bd.firebasestorage.app",
+            messagingSenderId: "572801351430",
+            appId: "1:572801351430:web:c0cf32574991d48b6d2887"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        let pedalDegeri = 0, inisDegeri = 0;
+        
+        // Firebase'den anlık verileri dinle
+        db.ref('/pedal_sayac').on('value', (snapshot) => {
+            const deger = snapshot.val() || 0;
+            document.getElementById('pedalSayi').innerHTML = deger;
+            document.getElementById('pedalDurum').innerHTML = deger > 0 ? "PEDAL BASILDI" : "BEKLEMEDE";
+            document.getElementById('pedalDurum').className = "durum " + (deger > 0 ? "pedal-durum" : "bekle");
+        });
+        
+        db.ref('/inis_sayac').on('value', (snapshot) => {
+            const deger = snapshot.val() || 0;
+            document.getElementById('inisSayi').innerHTML = deger;
+            document.getElementById('inisDurum').innerHTML = deger > 0 ? "İNİŞ NOKTASI" : "BEKLEMEDE";
+            document.getElementById('inisDurum').className = "durum " + (deger > 0 ? "inis-durum" : "bekle");
+        });
+        
+        // Geçmiş kayıtları getir
+        function getirGecmis() {
+            const tarih = document.getElementById('tarihSecici').value;
+            if (!tarih) return;
+            
+            document.getElementById('seciliTarih').innerHTML = `📅 ${tarih}`;
+            const gunlukRef = db.ref(`/gunluk/${tarih}`);
+            gunlukRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                const tbody = document.getElementById('gecmisBody');
+                if (data) {
+                    const pedal = data.pedal || 0;
+                    const inis = data.inis || 0;
+                    tbody.innerHTML = `<tr><td>${pedal}</td><td>${inis}</td><td>${pedal + inis}</td></tr>`;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3">Bu tarihe ait kayıt yok</td></tr>';
+                }
+            });
+        }
+        
+        // Bugünün tarihini set et
+        const bugun = new Date().toISOString().split('T')[0];
+        document.getElementById('tarihSecici').value = bugun;
+        
+        // ============ WEB SERIAL ============
         let port = null;
         let reader = null;
-        let pedalDegeri = 0;
-        let inisDegeri = 0;
         
-        const pedalSayiElem = document.getElementById('pedalSayi');
-        const inisSayiElem = document.getElementById('inisSayi');
-        const pedalDurumElem = document.getElementById('pedalDurum');
-        const inisDurumElem = document.getElementById('inisDurum');
-        const durumElem = document.getElementById('durum');
-        
-        async function baglan() {
+        async function serialBaglan() {
             try {
                 port = await navigator.serial.requestPort();
                 await port.open({ baudRate: 115200 });
-                durumElem.innerHTML = "✅ Bağlandı! Sensör verileri bekleniyor...";
-                durumElem.style.color = "lightgreen";
-                document.getElementById('baglanBtn').style.display = "none";
+                document.getElementById('serialPanel').style.display = 'block';
+                document.getElementById('serialLog').innerHTML += '✅ Bağlandı!\n';
                 
                 reader = port.readable.getReader();
-                oku();
+                serialOku();
             } catch (err) {
-                durumElem.innerHTML = "❌ Bağlantı hatası: " + err.message;
-                durumElem.style.color = "red";
+                document.getElementById('serialLog').innerHTML += '❌ Hata: ' + err.message + '\n';
             }
         }
         
-        async function oku() {
+        async function serialOku() {
             let buffer = "";
             try {
                 while (true) {
@@ -133,32 +262,30 @@
                         if (line.startsWith('{') && line.endsWith('}')) {
                             try {
                                 const veri = JSON.parse(line);
+                                document.getElementById('serialLog').innerHTML += '📡 ' + line + '\n';
                                 if (veri.type === 'pedal') {
                                     pedalDegeri = veri.value;
-                                    pedalSayiElem.innerHTML = pedalDegeri;
-                                    pedalDurumElem.innerHTML = pedalDegeri > 0 ? "✅ PEDAL BASILDI" : "BEKLEMEDE";
-                                    pedalDurumElem.className = "durum " + (pedalDegeri > 0 ? "pedal" : "bekle");
                                 } else if (veri.type === 'inis') {
                                     inisDegeri = veri.value;
-                                    inisSayiElem.innerHTML = inisDegeri;
-                                    inisDurumElem.innerHTML = inisDegeri > 0 ? "📍 İNİŞ NOKTASI" : "BEKLEMEDE";
-                                    inisDurumElem.className = "durum " + (inisDegeri > 0 ? "inis" : "bekle");
                                 }
                             } catch(e) {}
                         }
+                        document.getElementById('serialPanel').scrollTop = document.getElementById('serialPanel').scrollHeight;
                     }
                 }
             } catch (err) {
-                durumElem.innerHTML = "❌ Okuma hatası: " + err.message;
+                document.getElementById('serialLog').innerHTML += '❌ Okuma hatası\n';
             }
         }
         
-        document.getElementById('baglanBtn').addEventListener('click', baglan);
+        document.getElementById('serialBtn').addEventListener('click', serialBaglan);
+        document.getElementById('firebaseBtn').addEventListener('click', () => {
+            document.getElementById('serialLog').innerHTML += '🔥 Firebase bağlı, veriler otomatik geliyor\n';
+        });
         
         if (!("serial" in navigator)) {
-            durumElem.innerHTML = "❌ Tarayıcınız Web Serial API'yi desteklemiyor. Chrome kullanın.";
-            durumElem.style.color = "red";
-            document.getElementById('baglanBtn').disabled = true;
+            document.getElementById('serialBtn').disabled = true;
+            document.getElementById('serialLog').innerHTML += '❌ Web Serial desteklenmiyor. Chrome kullanın.\n';
         }
     </script>
 </body>
