@@ -218,24 +218,35 @@
         updateClock();
         
         function yukleGecmis() {
-            const kayitli = localStorage.getItem('abkant_gecmis_v5');
+            const kayitli = localStorage.getItem('abkant_gecmis_v6');
             if (kayitli) {
                 gunlukVeri = JSON.parse(kayitli);
-                // Son değeri göster
+                // SON DEĞERİ GÖSTER
                 const bugun = new Date().toISOString().split('T')[0];
-                if (gunlukVeri[bugun]) {
-                    sonPedalDegeri = gunlukVeri[bugun].pedal || 0;
+                if (gunlukVeri[bugun] && gunlukVeri[bugun].pedal) {
+                    sonPedalDegeri = gunlukVeri[bugun].pedal;
                     document.getElementById('pedalSayi').innerHTML = sonPedalDegeri;
                     document.getElementById('pedalSon').innerHTML = `Son kayıt: ${sonPedalDegeri}`;
+                } else {
+                    // Başka bir günün son değerini bul (en son gün)
+                    const tarihler = Object.keys(gunlukVeri).sort().reverse();
+                    if (tarihler.length > 0) {
+                        const sonGun = tarihler[0];
+                        sonPedalDegeri = gunlukVeri[sonGun].pedal || 0;
+                        document.getElementById('pedalSayi').innerHTML = sonPedalDegeri;
+                        document.getElementById('pedalSon').innerHTML = `Son kayıt: ${sonPedalDegeri} (${sonGun})`;
+                    }
                 }
             } else {
                 gunlukVeri = {};
+                document.getElementById('pedalSayi').innerHTML = '0';
+                document.getElementById('pedalSon').innerHTML = 'Son kayıt: -';
             }
             gecmisListele();
         }
         
         function kaydetGecmis() {
-            localStorage.setItem('abkant_gecmis_v5', JSON.stringify(gunlukVeri));
+            localStorage.setItem('abkant_gecmis_v6', JSON.stringify(gunlukVeri));
         }
         
         function veriGuncelle(deger, simdikiZaman = null) {
@@ -258,6 +269,8 @@
             
             gunlukVeri[bugun].pedal = deger;
             sonPedalDegeri = deger;
+            
+            // EKRANI GÜNCELLE - BURASI ÇOK ÖNEMLİ!
             document.getElementById('pedalSayi').innerHTML = deger;
             document.getElementById('pedalDurum').innerHTML = "PEDAL BASILDI";
             document.getElementById('pedalDurum').className = "durum pedal-durum";
@@ -344,6 +357,9 @@
                 const logElem = document.getElementById('serialLog');
                 logElem.innerHTML = '✅ Bağlandı! Veriler alınıyor...\n';
                 
+                // Bağlanınca son değeri göster
+                yukleGecmis();
+                
                 reader = port.readable.getReader();
                 serialOku();
             } catch (err) {
@@ -391,11 +407,13 @@
         
         function temizleGecmis() {
             if (confirm('Tüm geçmiş kayıtlar silinecek. Devam et?')) {
-                localStorage.removeItem('abkant_gecmis_v5');
+                localStorage.removeItem('abkant_gecmis_v6');
                 gunlukVeri = {};
+                sonPedalDegeri = 0;
                 gecmisListele();
                 document.getElementById('serialLog').innerHTML += '🗑 Geçmiş kayıtlar silindi.\n';
                 document.getElementById('pedalSayi').innerHTML = '0';
+                document.getElementById('pedalSon').innerHTML = 'Son kayıt: -';
                 document.getElementById('detayPanel').style.display = 'none';
             }
         }
