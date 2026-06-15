@@ -2,8 +2,6 @@
 <html>
 <head>
     <title>Abkant Büküm Takip Sistemi</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -26,9 +24,8 @@
             margin-bottom: 20px;
         }
         .anlik-panel {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            display: flex;
+            justify-content: center;
             margin-bottom: 30px;
         }
         .kart {
@@ -37,6 +34,8 @@
             padding: 25px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
         }
         .kart h3 {
             color: #666;
@@ -54,7 +53,6 @@
             margin-top: 10px;
         }
         .pedal-durum { background: #ff6b6b; color: white; }
-        .inis-durum { background: #4ecdc4; color: white; }
         .bekle { background: #f0f0f0; color: #666; }
         
         .gecmis {
@@ -66,6 +64,30 @@
         .gecmis h3 {
             margin-bottom: 15px;
             color: #333;
+        }
+        .detay {
+            background: #f9f9f9;
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .detay h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .detay-listesi {
+            list-style: none;
+            padding: 0;
+        }
+        .detay-listesi li {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            font-family: monospace;
+        }
+        .detay-listesi li:nth-child(even) {
+            background: #f0f0f0;
         }
         table {
             width: 100%;
@@ -79,6 +101,10 @@
         th {
             background: #667eea;
             color: white;
+            cursor: pointer;
+        }
+        th:hover {
+            background: #5a67d8;
         }
         button {
             background: #667eea;
@@ -107,6 +133,18 @@
             color: #888;
             margin-top: 5px;
         }
+        .tarih-secici {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .tarih-secici input {
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -125,29 +163,31 @@
                 <div class="durum" id="pedalDurum">BEKLEMEDE</div>
                 <div class="son-deger" id="pedalSon">Son kayıt: -</div>
             </div>
-            <div class="kart">
-                <h3>📍 EKRAN AÇILMA SAYACI</h3>
-                <div class="sayi" id="inisSayi">0</div>
-                <div class="durum" id="inisDurum">BEKLEMEDE</div>
-                <div class="son-deger" id="inisSon">Son kayıt: -</div>
-            </div>
         </div>
         
         <div class="gecmis">
-            <h3>📜 GEÇMİŞ KAYITLAR (Günlük Son Sayılar)</h3>
-            <div>
+            <h3>📜 GEÇMİŞ KAYITLAR</h3>
+            <div class="tarih-secici">
                 <input type="date" id="tarihSecici">
                 <button onclick="getirGecmis()">📅 GÖSTER</button>
             </div>
-            <div style="margin-top: 20px;">
-                <table id="gecmisTablo">
-                    <thead>
-                        <tr><th>Tarih</th><th>Pedal (Son)</th><th>Ekran Açılma (Son)</th></tr>
-                    </thead>
-                    <tbody id="gecmisBody">
-                        <tr><td colspan="3">Henüz kayıt yok</td></tr>
-                    </tbody>
-                </table>
+            
+            <table id="gecmisTablo">
+                <thead>
+                    <tr>
+                        <th onclick="siralaByTarih()">Tarih 📅</th>
+                        <th>Pedal Sayısı</th>
+                        <th onclick="detayGoster()">📋 Detay</th>
+                    </tr>
+                </thead>
+                <tbody id="gecmisBody">
+                    <tr><td colspan="3">Henüz kayıt yok</td></tr>
+                </tbody>
+            </table>
+            
+            <div id="detayPanel" class="detay" style="display:none;">
+                <h4 id="detayTarih"></h4>
+                <ul id="detayListesi" class="detay-listesi"></ul>
             </div>
         </div>
         
@@ -160,19 +200,17 @@
         let port = null;
         let reader = null;
         let gunlukVeri = {};
+        let tumBasimlar = [];  // Tüm basım kayıtları {zaman, sayac}
         let sonPedalDegeri = 0;
-        let sonInisDegeri = 0;
         
         function yukleGecmis() {
-            const kayitli = localStorage.getItem('abkant_gecmis_v2');
+            const kayitli = localStorage.getItem('abkant_gecmis_v4');
             if (kayitli) {
                 gunlukVeri = JSON.parse(kayitli);
                 const bugun = new Date().toISOString().split('T')[0];
                 if (gunlukVeri[bugun]) {
                     sonPedalDegeri = gunlukVeri[bugun].pedal || 0;
-                    sonInisDegeri = gunlukVeri[bugun].inis || 0;
                     document.getElementById('pedalSayi').innerHTML = sonPedalDegeri;
-                    document.getElementById('inisSayi').innerHTML = sonInisDegeri;
                 }
             } else {
                 gunlukVeri = {};
@@ -181,38 +219,55 @@
         }
         
         function kaydetGecmis() {
-            localStorage.setItem('abkant_gecmis_v2', JSON.stringify(gunlukVeri));
+            localStorage.setItem('abkant_gecmis_v4', JSON.stringify(gunlukVeri));
         }
         
-        function veriGuncelle(tur, deger) {
+        function veriGuncelle(deger) {
             const bugun = new Date().toISOString().split('T')[0];
             if (!gunlukVeri[bugun]) {
-                gunlukVeri[bugun] = { pedal: 0, inis: 0 };
+                gunlukVeri[bugun] = { pedal: 0, basimlar: [] };
             }
-            if (tur === 'pedal') {
-                gunlukVeri[bugun].pedal = deger;
-                sonPedalDegeri = deger;
-                document.getElementById('pedalSayi').innerHTML = deger;
-                document.getElementById('pedalDurum').innerHTML = "PEDAL BASILDI";
-                document.getElementById('pedalDurum').className = "durum pedal-durum";
-                document.getElementById('pedalSon').innerHTML = `Son kayıt: ${deger}`;
-            } else if (tur === 'inis') {
-                gunlukVeri[bugun].inis = deger;
-                sonInisDegeri = deger;
-                document.getElementById('inisSayi').innerHTML = deger;
-                document.getElementById('inisDurum').innerHTML = "EKRAN AÇILDI";
-                document.getElementById('inisDurum').className = "durum inis-durum";
-                document.getElementById('inisSon').innerHTML = `Son kayıt: ${deger}`;
-            }
+            gunlukVeri[bugun].pedal = deger;
+            sonPedalDegeri = deger;
+            document.getElementById('pedalSayi').innerHTML = deger;
+            document.getElementById('pedalDurum').innerHTML = "PEDAL BASILDI";
+            document.getElementById('pedalDurum').className = "durum pedal-durum";
+            document.getElementById('pedalSon').innerHTML = `Son kayıt: ${deger}`;
+            
             kaydetGecmis();
             gecmisListele();
             
             setTimeout(() => {
                 document.getElementById('pedalDurum').innerHTML = "BEKLEMEDE";
                 document.getElementById('pedalDurum').className = "durum bekle";
-                document.getElementById('inisDurum').innerHTML = "BEKLEMEDE";
-                document.getElementById('inisDurum').className = "durum bekle";
             }, 2000);
+        }
+        
+        function basimEkle(sayac, zamanMs) {
+            const bugun = new Date().toISOString().split('T')[0];
+            if (!gunlukVeri[bugun]) {
+                gunlukVeri[bugun] = { pedal: 0, basimlar: [] };
+            }
+            if (!gunlukVeri[bugun].basimlar) {
+                gunlukVeri[bugun].basimlar = [];
+            }
+            
+            // Saat hesapla (ms cinsinden)
+            const saat = Math.floor(zamanMs / 3600000) % 24;
+            const dakika = Math.floor(zamanMs / 60000) % 60;
+            const saniye = Math.floor(zamanMs / 1000) % 60;
+            const zamanStr = `${saat.toString().padStart(2,'0')}:${dakika.toString().padStart(2,'0')}:${saniye.toString().padStart(2,'0')}`;
+            
+            gunlukVeri[bugun].basimlar.push({
+                sayac: sayac,
+                zaman: zamanStr,
+                zamanMs: zamanMs
+            });
+            
+            // Sayacı güncelle
+            gunlukVeri[bugun].pedal = sayac;
+            kaydetGecmis();
+            gecmisListele();
         }
         
         function gecmisListele() {
@@ -224,23 +279,57 @@
                 const row = tbody.insertRow();
                 row.insertCell(0).innerHTML = tarih;
                 row.insertCell(1).innerHTML = veri.pedal || 0;
-                row.insertCell(2).innerHTML = veri.inis || 0;
+                const detayBtn = document.createElement('button');
+                detayBtn.innerHTML = '📋 Detay';
+                detayBtn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
+                const huc = row.insertCell(2);
+                huc.appendChild(detayBtn);
             }
             if (tarihler.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3">Henüz kayıt yok</td></tr>';
             }
         }
         
+        function detayGoster(tarih) {
+            const veri = gunlukVeri[tarih];
+            const panel = document.getElementById('detayPanel');
+            const basimlar = veri?.basimlar || [];
+            
+            document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Toplam ${basimlar.length} basım`;
+            const liste = document.getElementById('detayListesi');
+            liste.innerHTML = '';
+            
+            if (basimlar.length === 0) {
+                liste.innerHTML = '<li>Bu güne ait basım kaydı yok</li>';
+            } else {
+                for (let b of basimlar) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `🕐 ${b.zaman} - ${b.sayac}. basım`;
+                    liste.appendChild(li);
+                }
+            }
+            panel.style.display = 'block';
+            
+            // Scroll yap
+            panel.scrollIntoView({ behavior: 'smooth' });
+        }
+        
         function getirGecmis() {
             const secilen = document.getElementById('tarihSecici').value;
             if (!secilen) return;
-            const veri = gunlukVeri[secilen];
+            detayGoster(secilen);
+        }
+        
+        function siralaByTarih() {
             const tbody = document.getElementById('gecmisBody');
-            if (veri) {
-                tbody.innerHTML = `<tr><td>${secilen}</td><td>${veri.pedal || 0}</td><td>${veri.inis || 0}</td></tr>`;
-            } else {
-                tbody.innerHTML = '<tr><td colspan="3">Bu tarihe ait kayıt yok</td></tr>';
-            }
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                const tarihA = a.cells[0].innerText;
+                const tarihB = b.cells[0].innerText;
+                return tarihB.localeCompare(tarihA);
+            });
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
         }
         
         const bugun = new Date().toISOString().split('T')[0];
@@ -251,7 +340,7 @@
                 port = await navigator.serial.requestPort();
                 await port.open({ baudRate: 115200 });
                 const logElem = document.getElementById('serialLog');
-                logElem.innerHTML = '✅ Bağlandı! Geçmiş veriler alınıyor...\n';
+                logElem.innerHTML = '✅ Bağlandı! Veriler alınıyor...\n';
                 
                 reader = port.readable.getReader();
                 serialOku();
@@ -281,9 +370,9 @@
                                 logElem.scrollTop = logElem.scrollHeight;
                                 
                                 if (veri.type === 'pedal') {
-                                    veriGuncelle('pedal', veri.value);
-                                } else if (veri.type === 'inis') {
-                                    veriGuncelle('inis', veri.value);
+                                    veriGuncelle(veri.value);
+                                } else if (veri.type === 'basim') {
+                                    basimEkle(veri.sayac, veri.zaman);
                                 }
                             } catch(e) {}
                         }
@@ -296,12 +385,12 @@
         
         function temizleGecmis() {
             if (confirm('Tüm geçmiş kayıtlar silinecek. Devam et?')) {
-                localStorage.removeItem('abkant_gecmis_v2');
+                localStorage.removeItem('abkant_gecmis_v4');
                 gunlukVeri = {};
                 gecmisListele();
                 document.getElementById('serialLog').innerHTML += '🗑 Geçmiş kayıtlar silindi.\n';
                 document.getElementById('pedalSayi').innerHTML = '0';
-                document.getElementById('inisSayi').innerHTML = '0';
+                document.getElementById('detayPanel').style.display = 'none';
             }
         }
         
