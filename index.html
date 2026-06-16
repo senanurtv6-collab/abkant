@@ -16,8 +16,8 @@
             padding: 20px;
         }
         .container { max-width: 1200px; margin: 0 auto; }
-        h1 { color: white; text-align: center; margin-bottom: 10px; }
-        .aciklama { text-align: center; color: white; margin-bottom: 30px; font-size: 0.9em; }
+        h1 { color: white; text-align: center; margin-bottom: 5px; }
+        .aciklama { text-align: center; color: #ddd; margin-bottom: 30px; font-size: 0.9em; }
         
         .anlik {
             background: white;
@@ -68,15 +68,17 @@
         }
         .detay-listesi li:nth-child(even) { background: #f0f0f0; }
         
-        .tarih-secici { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
-        .tarih-secici input { padding: 10px; border-radius: 10px; border: 1px solid #ddd; flex: 1; }
+        .tarih-secici { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+        .tarih-secici input { padding: 10px; border-radius: 10px; border: 1px solid #ddd; flex: 1; min-width: 150px; }
         
         .footer { text-align: center; color: white; margin-top: 20px; font-size: 0.8em; }
         .yenile-btn {
             background: white; color: #667eea; border: none;
             padding: 8px 16px; border-radius: 10px; cursor: pointer;
-            margin-bottom: 15px; font-weight: bold;
+            margin: 5px; font-weight: bold;
         }
+        .yenile-btn:hover { background: #f0f0f0; }
+        .gun-bilgi { background: #333; color: #fff; padding: 8px 16px; border-radius: 20px; display: inline-block; margin-top: 10px; font-size: 0.9em; }
     </style>
 </head>
 <body>
@@ -86,6 +88,7 @@
         
         <div style="text-align: center;">
             <button class="yenile-btn" onclick="manuelYenile()">🔄 MANUEL YENİLE</button>
+            <button class="yenile-btn" onclick="tarihGonder()">📅 TARİHİ GÜNCELLE</button>
         </div>
         
         <div class="anlik">
@@ -93,6 +96,7 @@
             <div class="sayi" id="anlikSayac">0</div>
             <div class="zaman" id="anlikZaman">Yükleniyor...</div>
             <div id="anlikDurum" class="bekle-durum">⏳ BEKLEMEDE</div>
+            <div class="gun-bilgi" id="gunBilgi">Bugün: -</div>
         </div>
         
         <div class="ozet">
@@ -110,7 +114,7 @@
                     </tr>
                 </thead>
                 <tbody id="ozetBody">
-                    <tr><td colspan="3" style="text-align:center">Yükleniyor...</td><tr>
+                    <tr><td colspan="3" style="text-align:center">Yükleniyor...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -121,11 +125,12 @@
         </div>
         
         <div class="footer">
-            Canlı Takip | Veriler tarayıcıda saklanır | Her basış kaydedilir
+            Canlı Takip | Veriler tarayıcıda saklanır | Her basış kaydedilir | Firebase ile senkron
         </div>
     </div>
 
     <script>
+        // ============ FIREBASE KONFIG ============
         const firebaseConfig = {
             apiKey: "AIzaSyD-wX1t7jMkYWG_1NpbDnQsgjVc9khrIVk",
             authDomain: "abkant3-e42bd.firebaseapp.com",
@@ -140,7 +145,26 @@
         const db = firebase.database();
         
         let sonDeger = 0;
-        let tumBasimlar = [];  // Tüm basımlar {sayac, saat, tarih}
+        let tumBasimlar = [];
+        let bugunTarih = "";
+        
+        // ============ TARİHİ FIREBASE'E YAZ ============
+        function tarihGonder() {
+            const simdi = new Date();
+            const tarih = simdi.toISOString().split('T')[0];
+            const saat = simdi.toLocaleTimeString('tr-TR');
+            
+            db.ref('/tarih').set({ tarih: tarih, saat: saat });
+            document.getElementById('gunBilgi').innerHTML = `📅 Bugün: ${tarih} (${saat})`;
+            alert(`✅ Tarih Firebase'e yazıldı: ${tarih}`);
+        }
+        
+        // Sayfa yüklenince otomatik tarih gönder
+        window.onload = function() {
+            tarihGonder();
+            basimlariYukle();
+            document.getElementById('tarihSecici').value = new Date().toISOString().split('T')[0];
+        };
         
         // ============ ANLIK VERİ ============
         db.ref('/pedal').on('value', (snapshot) => {
@@ -181,10 +205,10 @@
             const kayitli = localStorage.getItem('abkant_tum_basimlar');
             if (kayitli) {
                 tumBasimlar = JSON.parse(kayitli);
-                // Son değeri bul
                 if (tumBasimlar.length > 0) {
                     sonDeger = tumBasimlar[tumBasimlar.length-1].sayac;
                     document.getElementById('anlikSayac').innerHTML = sonDeger;
+                    document.getElementById('gunBilgi').innerHTML = `📅 Bugün: ${tumBasimlar[tumBasimlar.length-1].tarih}`;
                 }
             }
             ozetListele();
@@ -192,7 +216,6 @@
         
         // ============ GÜNLÜK ÖZET ============
         function ozetListele() {
-            // Günlere göre grupla
             const gunOzet = {};
             for (let b of tumBasimlar) {
                 if (!gunOzet[b.tarih]) {
@@ -207,7 +230,7 @@
             
             const tarihler = Object.keys(gunOzet).sort().reverse();
             if (tarihler.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3">Henüz kayıt yok</td><tr>';
+                tbody.innerHTML = '<tr><td colspan="3">Henüz kayıt yok</td></tr>';
                 return;
             }
             
@@ -226,7 +249,6 @@
         
         // ============ DETAY GÖSTER ============
         function detayGoster(tarih) {
-            // O günün basımlarını filtrele
             const gunBasimlari = tumBasimlar.filter(b => b.tarih === tarih);
             gunBasimlari.sort((a, b) => a.sayac - b.sayac);
             
@@ -266,6 +288,7 @@
             rows.forEach(row => tbody.appendChild(row));
         }
         
+        // ============ MANUEL YENİLE ============
         function manuelYenile() {
             db.ref('/pedal').once('value', (snapshot) => {
                 const data = snapshot.val();
@@ -285,11 +308,11 @@
             });
         }
         
-        document.getElementById('tarihSecici').value = new Date().toISOString().split('T')[0];
-        basimlariYukle();
-        
-        // Her 10 saniyede bir özeti yenile
+        // ============ OTOMATIK GÜNCELLEME ============
         setInterval(ozetListele, 10000);
+        setInterval(tarihGonder, 3600000); // Her saat başı tarih güncelle
+        
+        console.log("Web sayfası başlatıldı.");
     </script>
 </body>
 </html>
