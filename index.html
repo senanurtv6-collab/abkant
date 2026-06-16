@@ -88,6 +88,7 @@
         
         <div style="text-align: center;">
             <button class="yenile-btn" onclick="verileriYenile()">🔄 VERİLERİ YENİLE</button>
+            <button class="yenile-btn" onclick="localStorage.clear(); location.reload();">🗑 ÖNBELLEĞİ TEMİZLE</button>
         </div>
         
         <div class="anlik">
@@ -123,7 +124,7 @@
         </div>
         
         <div class="footer">
-            Canlı Takip | Veriler tarayıcıda saklanır | Her basış kaydedilir | Firebase ile senkron
+            Canlı Takip | Veriler tarayıcıda saklanır | Her basış kaydedilir
         </div>
     </div>
 
@@ -144,9 +145,9 @@
         let tumBasimlar = [];
         let sonDeger = 0;
 
-        // ============ VERİ YÜKLEME ============
+        // ============ ANA VERİ YÜKLEME ============
         async function verileriYenile() {
-            document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3">Yükleniyor...</td></tr>';
+            document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3">⏳ Veriler yükleniyor...</td></tr>';
             
             // 1. LocalStorage'dan oku
             const kayitli = localStorage.getItem('abkant_tum_basimlar');
@@ -156,15 +157,14 @@
                 document.getElementById('anlikSayac').innerHTML = sonDeger;
             }
 
-            // 2. Firebase'den /gunluk yolunu oku
+            // 2. Firebase'den /gunluk yolunu OKU (TÜM GÜNLERİ)
             try {
                 const snapshot = await db.ref('/gunluk').once('value');
                 const gunlukVerisi = snapshot.val();
 
                 if (gunlukVerisi) {
-                    // Firebase'deki her gün için
                     for (const [tarih, veri] of Object.entries(gunlukVerisi)) {
-                        // Eğer bu tarih zaten localStorage'da yoksa ekle
+                        // Bu tarih zaten var mı kontrol et
                         const mevcut = tumBasimlar.some(b => b.tarih === tarih);
                         if (!mevcut && veri.basimlar) {
                             // Firebase'deki basımları al
@@ -178,13 +178,14 @@
                             }
                         }
                     }
+                    
                     // Son değeri güncelle
                     if (tumBasimlar.length > 0) {
                         sonDeger = tumBasimlar[tumBasimlar.length-1].sayac;
                         document.getElementById('anlikSayac').innerHTML = sonDeger;
                     }
                     
-                    // LocalStorage'ı güncelle
+                    // LocalStorage'ı güncelle (kaydet)
                     localStorage.setItem('abkant_tum_basimlar', JSON.stringify(tumBasimlar));
                 }
             } catch (error) {
@@ -193,10 +194,10 @@
 
             // Özeti listele
             ozetListele();
-            document.getElementById('anlikZaman').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
+            document.getElementById('anlikZaman').innerHTML = `🕐 Son güncelleme: ${new Date().toLocaleString('tr-TR')}`;
         }
 
-        // ============ GÜNLÜK ÖZET ============
+        // ============ GÜNLÜK ÖZET LİSTELE ============
         function ozetListele() {
             const gunOzet = {};
             for (let b of tumBasimlar) {
@@ -269,6 +270,36 @@
             tbody.innerHTML = '';
             rows.forEach(row => tbody.appendChild(row));
         }
+
+        // ============ ANLIK VERİ DİNLE ============
+        db.ref('/pedal').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.sayac !== undefined) {
+                const deger = data.sayac;
+                sonDeger = deger;
+                document.getElementById('anlikSayac').innerHTML = deger;
+                document.getElementById('anlikZaman').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
+                document.getElementById('anlikDurum').innerHTML = "✅ PEDAL BASILDI";
+                document.getElementById('anlikDurum').className = "pedal-durum";
+                
+                // YENİ BASIM: web'den saat ve tarih ekle
+                if (deger > (tumBasimlar[tumBasimlar.length-1]?.sayac || 0)) {
+                    const simdi = new Date();
+                    const saat = simdi.toLocaleTimeString('tr-TR');
+                    const tarih = simdi.toISOString().split('T')[0];
+                    tumBasimlar.push({ sayac: deger, saat: saat, tarih: tarih });
+                    localStorage.setItem('abkant_tum_basimlar', JSON.stringify(tumBasimlar));
+                    ozetListele();
+                }
+                
+                setTimeout(() => {
+                    if (document.getElementById('anlikSayac').innerHTML == deger) {
+                        document.getElementById('anlikDurum').innerHTML = "⏳ BEKLEMEDE";
+                        document.getElementById('anlikDurum').className = "bekle-durum";
+                    }
+                }, 2000);
+            }
+        });
 
         // ============ SAYFA YÜKLENİNCE ============
         window.onload = function() {
