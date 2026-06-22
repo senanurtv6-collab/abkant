@@ -88,7 +88,6 @@
         
         <div style="text-align: center;">
             <button class="yenile-btn" onclick="verileriYenile()">🔄 VERİLERİ YENİLE</button>
-            <button class="yenile-btn" onclick="localStorage.clear(); location.reload();">🗑 ÖNBELLEĞİ TEMİZLE</button>
         </div>
         
         <div class="anlik">
@@ -292,11 +291,13 @@
                         if (!mevcut && veri.basimlar) {
                             const basimlar = Object.values(veri.basimlar);
                             for (let b of basimlar) {
-                                tumBasimlar.push({
-                                    sayac: b.sayac,
-                                    saat: b.saat || '00:00:00',
-                                    tarih: tarih
-                                });
+                                if (b && b.sayac !== undefined) {
+                                    tumBasimlar.push({
+                                        sayac: b.sayac,
+                                        saat: b.saat || '00:00:00',
+                                        tarih: tarih
+                                    });
+                                }
                             }
                         }
                     }
