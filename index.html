@@ -145,6 +145,38 @@
         let sonDeger = 0;
         let tumBasimlar = [];
 
+        // ============ LOCALSTORAGE'DAN YÜKLE ============
+        function basimlariYukle() {
+            const kayitli = localStorage.getItem('abkant_tum_basimlar');
+            if (kayitli) {
+                tumBasimlar = JSON.parse(kayitli);
+                if (tumBasimlar.length > 0) {
+                    sonDeger = tumBasimlar[tumBasimlar.length-1].sayac;
+                    document.getElementById('anlikSayac').innerHTML = sonDeger;
+                }
+            } else {
+                tumBasimlar = [];
+            }
+            ozetListele();
+        }
+
+        // ============ LOCALSTORAGE'A KAYDET (Her basım ayrı) ============
+        function kaydetBasim(sayac, saat, tarih) {
+            // Önce mevcut kayıtları al
+            let mevcut = JSON.parse(localStorage.getItem('abkant_tum_basimlar') || '[]');
+            
+            // Bu basım zaten var mı kontrol et (sayac ve tarih aynı)
+            const varMi = mevcut.some(b => b.sayac === sayac && b.tarih === tarih);
+            
+            if (!varMi) {
+                mevcut.push({ sayac: sayac, saat: saat, tarih: tarih });
+                localStorage.setItem('abkant_tum_basimlar', JSON.stringify(mevcut));
+                tumBasimlar = mevcut;
+                ozetListele();
+                console.log('✅ Yeni basım kaydedildi:', sayac, saat, tarih);
+            }
+        }
+
         // ============ ANLIK VERİ ============
         db.ref('/pedal').on('value', (snapshot) => {
             const data = snapshot.val();
@@ -155,20 +187,12 @@
                 document.getElementById('anlikDurum').innerHTML = "✅ PEDAL BASILDI";
                 document.getElementById('anlikDurum').className = "pedal-durum";
                 
-                // HER BASIMI AYRI AYRI KAYDET
+                // HER BASIMI AYRI KAYDET
                 const bugun = new Date().toISOString().split('T')[0];
                 const simdi = new Date();
                 const saat = simdi.toLocaleTimeString('tr-TR');
                 
-                // Önceki basım sayısını kontrol et
-                const oncekiSayac = tumBasimlar.length > 0 ? tumBasimlar[tumBasimlar.length-1].sayac : 0;
-                
-                // Eğer bu basım daha önce kaydedilmemişse ve sayac arttıysa
-                if (sonDeger > oncekiSayac) {
-                    tumBasimlar.push({ sayac: sonDeger, saat: saat, tarih: bugun });
-                    localStorage.setItem('abkant_tum_basimlar', JSON.stringify(tumBasimlar));
-                    ozetListele();
-                }
+                kaydetBasim(sonDeger, saat, bugun);
                 
                 setTimeout(() => {
                     if (document.getElementById('anlikSayac').innerHTML == sonDeger) {
@@ -178,23 +202,6 @@
                 }, 2000);
             }
         });
-
-        // ============ KAYIT YÖNETİMİ ============
-        function kaydetBasimlar() {
-            localStorage.setItem('abkant_tum_basimlar', JSON.stringify(tumBasimlar));
-        }
-        
-        function basimlariYukle() {
-            const kayitli = localStorage.getItem('abkant_tum_basimlar');
-            if (kayitli) {
-                tumBasimlar = JSON.parse(kayitli);
-                if (tumBasimlar.length > 0) {
-                    sonDeger = tumBasimlar[tumBasimlar.length-1].sayac;
-                    document.getElementById('anlikSayac').innerHTML = sonDeger;
-                }
-            }
-            ozetListele();
-        }
 
         // ============ GÜNLÜK ÖZET ============
         function ozetListele() {
@@ -274,27 +281,19 @@
         async function verileriYenile() {
             document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3">⏳ Yükleniyor...</td></tr>';
             
-            // LocalStorage'dan yükle
-            const kayitli = localStorage.getItem('abkant_tum_basimlar');
-            if (kayitli) {
-                tumBasimlar = JSON.parse(kayitli);
-            } else {
-                tumBasimlar = [];
-            }
-            
             // Firebase'den günlük verileri al
             try {
                 const snapshot = await db.ref('/gunluk').once('value');
                 const gunlukVerisi = snapshot.val();
+                let yeniBasimlar = [];
                 
                 if (gunlukVerisi) {
                     for (const [tarih, veri] of Object.entries(gunlukVerisi)) {
-                        const mevcut = tumBasimlar.some(b => b.tarih === tarih);
-                        if (!mevcut && veri.basimlar) {
+                        if (veri.basimlar) {
                             const basimlar = Object.values(veri.basimlar);
                             for (let b of basimlar) {
                                 if (b && b.sayac !== undefined) {
-                                    tumBasimlar.push({
+                                    yeniBasimlar.push({
                                         sayac: b.sayac,
                                         saat: b.saat || '00:00:00',
                                         tarih: tarih
@@ -303,7 +302,8 @@
                             }
                         }
                     }
-                    localStorage.setItem('abkant_tum_basimlar', JSON.stringify(tumBasimlar));
+                    localStorage.setItem('abkant_tum_basimlar', JSON.stringify(yeniBasimlar));
+                    tumBasimlar = yeniBasimlar;
                 }
             } catch (error) {
                 console.error('Firebase okuma hatası:', error);
