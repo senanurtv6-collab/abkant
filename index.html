@@ -155,14 +155,16 @@
                 document.getElementById('anlikDurum').innerHTML = "✅ PEDAL BASILDI";
                 document.getElementById('anlikDurum').className = "pedal-durum";
                 
-                // Eğer bu değer daha önce kaydedilmediyse, lokal depolamaya ekle
+                // HER BASIMI AYRI AYRI KAYDET
                 const bugun = new Date().toISOString().split('T')[0];
                 const simdi = new Date();
                 const saat = simdi.toLocaleTimeString('tr-TR');
                 
-                // Mevcut basımları kontrol et
-                const mevcut = tumBasimlar.some(b => b.sayac === sonDeger && b.tarih === bugun);
-                if (!mevcut && sonDeger > 0) {
+                // Önceki basım sayısını kontrol et
+                const oncekiSayac = tumBasimlar.length > 0 ? tumBasimlar[tumBasimlar.length-1].sayac : 0;
+                
+                // Eğer bu basım daha önce kaydedilmemişse ve sayac arttıysa
+                if (sonDeger > oncekiSayac) {
                     tumBasimlar.push({ sayac: sonDeger, saat: saat, tarih: bugun });
                     localStorage.setItem('abkant_tum_basimlar', JSON.stringify(tumBasimlar));
                     ozetListele();
