@@ -78,7 +78,13 @@
             margin: 5px; font-weight: bold;
         }
         .yenile-btn:hover { background: #f0f0f0; }
-        .gun-bilgi { background: #333; color: #fff; padding: 8px 16px; border-radius: 20px; display: inline-block; margin-top: 10px; font-size: 0.9em; }
+        .toplam-bilgi {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
         .canli-bilgi {
             background: #27ae60;
             color: white;
@@ -88,27 +94,26 @@
             font-size: 0.8em;
             margin-top: 5px;
         }
-        .sil-btn {
-            background: #e74c3c;
+        .gun-sayisi {
+            background: #667eea;
             color: white;
-            border: none;
-            padding: 3px 10px;
-            border-radius: 5px;
-            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
             font-size: 0.8em;
         }
-        .sil-btn:hover { background: #c0392b; }
         .yukleniyor {
             text-align: center;
             padding: 20px;
             color: #666;
         }
-        .toplam-bilgi {
-            background: #f0f0f0;
+        .hata {
+            color: #e74c3c;
+            text-align: center;
             padding: 10px;
-            border-radius: 10px;
-            margin-top: 10px;
-            font-size: 0.9em;
+        }
+        .success {
+            color: #27ae60;
         }
     </style>
 </head>
@@ -148,7 +153,7 @@
                     </tr>
                 </thead>
                 <tbody id="ozetBody">
-                    <tr><td colspan="4" style="text-align:center">Yükleniyor...</td></tr>
+                    <tr><td colspan="4" style="text-align:center">⏳ Yükleniyor...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -179,7 +184,6 @@
         const db = firebase.database();
 
         let tumGunlukVerisi = {};
-        let tumBasimlar = [];
 
         // ============ ANLIK VERİ ============
         db.ref('/pedal').on('value', (snapshot) => {
@@ -206,33 +210,51 @@
             document.getElementById('toplamBilgi').innerHTML = '';
             
             try {
-                const snapshot = await db.ref('/gunluk').once('value');
-                tumGunlukVerisi = snapshot.val() || {};
+                // 1. Önce /gunluk verilerini çek
+                const snapshotGunluk = await db.ref('/gunluk').once('value');
+                const gunlukVerisi = snapshotGunluk.val() || {};
                 
-                if (Object.keys(tumGunlukVerisi).length === 0) {
+                // 2. Anlık sayacı da al
+                const snapshotPedal = await db.ref('/pedal').once('value');
+                const pedalVerisi = snapshotPedal.val() || {};
+                
+                if (pedalVerisi.sayac !== undefined) {
+                    document.getElementById('anlikSayac').innerHTML = pedalVerisi.sayac;
+                }
+                
+                // 3. Veriyi işle
+                if (Object.keys(gunlukVerisi).length === 0) {
                     document.getElementById('ozetBody').innerHTML = '<tr><td colspan="4" style="text-align:center">❌ Henüz kayıt yok</td></tr>';
                     document.getElementById('toplamBilgi').innerHTML = '📊 Toplam kayıtlı gün: 0';
                     return;
                 }
                 
-                // Tabloyu doldur
-                tabloyuDoldur(tumGunlukVerisi);
+                tumGunlukVerisi = gunlukVerisi;
+                tabloyuDoldur(gunlukVerisi);
                 
                 // Toplam bilgi
-                const gunSayisi = Object.keys(tumGunlukVerisi).length;
+                const gunSayisi = Object.keys(gunlukVerisi).length;
                 let toplamBasim = 0;
-                for (let tarih in tumGunlukVerisi) {
-                    if (tumGunlukVerisi[tarih].toplam) {
-                        toplamBasim += tumGunlukVerisi[tarih].toplam.sayac || 0;
+                let toplamSayac = 0;
+                
+                for (let tarih in gunlukVerisi) {
+                    const gun = gunlukVerisi[tarih];
+                    if (gun.toplam && gun.toplam.sayac) {
+                        toplamSayac += gun.toplam.sayac;
+                    }
+                    if (gun.basimlar) {
+                        toplamBasim += Object.keys(gun.basimlar).length;
                     }
                 }
-                document.getElementById('toplamBilgi').innerHTML = `📊 Toplam ${gunSayisi} gün | Toplam ${toplamBasim} basım`;
+                
+                document.getElementById('toplamBilgi').innerHTML = 
+                    `📊 Toplam ${gunSayisi} gün | Toplam ${toplamBasim} basım | Toplam ${toplamSayac} pedal`;
                 
                 document.getElementById('anlikZaman').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
                 
             } catch (error) {
                 console.error('Firebase okuma hatası:', error);
-                document.getElementById('ozetBody').innerHTML = '<tr><td colspan="4" style="text-align:center">❌ Veri çekilemedi</td></tr>';
+                document.getElementById('ozetBody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:red;">❌ Veri çekilemedi: ' + error.message + '</td></tr>';
             }
         }
 
@@ -241,7 +263,15 @@
             const tbody = document.getElementById('ozetBody');
             tbody.innerHTML = '';
             
-            const tarihler = Object.keys(veri).sort().reverse();
+            // Tarihlere göre sırala (en yeni en üstte)
+            const tarihler = Object.keys(veri).sort((a, b) => {
+                // DD-MM-YYYY formatını karşılaştır
+                const aParts = a.split('-');
+                const bParts = b.split('-');
+                const aDate = new Date(aParts[2], aParts[1] - 1, aParts[0]);
+                const bDate = new Date(bParts[2], bParts[1] - 1, bParts[0]);
+                return bDate - aDate;
+            });
             
             for (let tarih of tarihler) {
                 const gunVerisi = veri[tarih];
@@ -249,7 +279,7 @@
                 const basimSayisi = gunVerisi.basimlar ? Object.keys(gunVerisi.basimlar).length : 0;
                 
                 const row = tbody.insertRow();
-                row.insertCell(0).innerHTML = tarih.replace(/-/g, '.');
+                row.insertCell(0).innerHTML = tarih;
                 row.insertCell(1).innerHTML = `<b>${toplam}</b>`;
                 row.insertCell(2).innerHTML = basimSayisi;
                 
@@ -266,32 +296,50 @@
             const panel = document.getElementById('detayPanel');
             const liste = document.getElementById('detayListesi');
             
-            if (!tumGunlukVerisi[tarih] || !tumGunlukVerisi[tarih].basimlar) {
-                document.getElementById('detayTarih').innerHTML = `📅 ${tarih.replace(/-/g, '.')} - Detay yok`;
+            // Veriyi kontrol et
+            if (!tumGunlukVerisi[tarih]) {
+                document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Veri bulunamadı`;
+                liste.innerHTML = '<li>Bu güne ait kayıt yok</li>';
+                panel.style.display = 'block';
+                return;
+            }
+            
+            const gunVerisi = tumGunlukVerisi[tarih];
+            
+            if (!gunVerisi.basimlar || Object.keys(gunVerisi.basimlar).length === 0) {
+                document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Detay yok`;
                 liste.innerHTML = '<li>Bu güne ait basım detayı yok</li>';
                 panel.style.display = 'block';
                 return;
             }
             
-            const basimlarObj = tumGunlukVerisi[tarih].basimlar;
+            // Basımları al ve sırala
+            const basimlarObj = gunVerisi.basimlar;
             const basimlar = Object.values(basimlarObj);
             basimlar.sort((a, b) => (a.sayac || 0) - (b.sayac || 0));
             
-            document.getElementById('detayTarih').innerHTML = `📅 ${tarih.replace(/-/g, '.')} - Basım Detayları (Toplam: ${basimlar.length} basım)`;
+            const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
+            document.getElementById('detayTarih').innerHTML = 
+                `📅 ${tarih} - Basım Detayları (Toplam: ${basimlar.length} basım, Son: ${toplam})`;
+            
             liste.innerHTML = '';
             
-            if (basimlar.length === 0) {
-                liste.innerHTML = '<li>Bu güne ait basım kaydı yok</li>';
-            } else {
-                for (let b of basimlar) {
-                    const li = document.createElement('li');
-                    const saat = b.saat || '00:00:00';
-                    const sayac = b.sayac || 0;
-                    const timestamp = b.timestamp || '';
-                    li.innerHTML = `🕐 ${saat} - <b>${sayac}</b>. basım ${timestamp ? '| 🕐 ' + new Date(timestamp*1000).toLocaleString('tr-TR') : ''}`;
-                    liste.appendChild(li);
+            for (let b of basimlar) {
+                const li = document.createElement('li');
+                const saat = b.saat || '00:00:00';
+                const sayac = b.sayac || 0;
+                const timestamp = b.timestamp || '';
+                
+                let zaman = saat;
+                if (timestamp) {
+                    const tarihObj = new Date(timestamp * 1000);
+                    zaman = tarihObj.toLocaleTimeString('tr-TR');
                 }
+                
+                li.innerHTML = `🕐 ${zaman} - <b>${sayac}</b>. basım`;
+                liste.appendChild(li);
             }
+            
             panel.style.display = 'block';
             panel.scrollIntoView({ behavior: 'smooth' });
         }
@@ -299,15 +347,19 @@
         // ============ TARİH SEÇ ============
         function tarihSec() {
             const secilen = document.getElementById('tarihSecici').value;
-            if (secilen) {
-                // Tarih formatını dönüştür (YYYY-MM-DD -> DD-MM-YYYY)
-                const parts = secilen.split('-');
-                const tarihFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                if (tumGunlukVerisi[tarihFormat]) {
-                    detayGoster(tarihFormat);
-                } else {
-                    alert('Bu tarihe ait kayıt bulunamadı!');
-                }
+            if (!secilen) {
+                alert('Lütfen bir tarih seçin!');
+                return;
+            }
+            
+            // YYYY-MM-DD -> DD-MM-YYYY
+            const parts = secilen.split('-');
+            const tarihFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            
+            if (tumGunlukVerisi[tarihFormat]) {
+                detayGoster(tarihFormat);
+            } else {
+                alert(`❌ ${tarihFormat} tarihine ait kayıt bulunamadı!`);
             }
         }
 
@@ -325,13 +377,22 @@
         function siralaTarih() {
             const tbody = document.getElementById('ozetBody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
-            rows.sort((a, b) => {
-                const tarihA = a.cells[0].innerText.replace(/\./g, '-');
-                const tarihB = b.cells[0].innerText.replace(/\./g, '-');
-                return tarihB.localeCompare(tarihA);
-            });
-            tbody.innerHTML = '';
-            rows.forEach(row => tbody.appendChild(row));
+            
+            // Sadece veri satırlarını sırala (başlık değil)
+            if (rows.length > 0 && rows[0].cells.length === 4) {
+                rows.sort((a, b) => {
+                    const tarihA = a.cells[0].innerText;
+                    const tarihB = b.cells[0].innerText;
+                    const aParts = tarihA.split('-');
+                    const bParts = tarihB.split('-');
+                    const aDate = new Date(aParts[2], aParts[1] - 1, aParts[0]);
+                    const bDate = new Date(bParts[2], bParts[1] - 1, bParts[0]);
+                    return bDate - aDate;
+                });
+                
+                tbody.innerHTML = '';
+                rows.forEach(row => tbody.appendChild(row));
+            }
         }
 
         // ============ SAYFA YÜKLENİNCE ============
@@ -343,10 +404,21 @@
             const gun = String(bugun.getDate()).padStart(2, '0');
             document.getElementById('tarihSecici').value = `${yil}-${ay}-${gun}`;
             
+            // Verileri yükle
             verileriYenile();
             
-            // Her 30 saniyede bir yenile
-            setInterval(verileriYenile, 30000);
+            // Her 15 saniyede bir yenile (sadece anlık sayacı güncellemek için)
+            setInterval(() => {
+                db.ref('/pedal').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data && data.sayac !== undefined) {
+                        document.getElementById('anlikSayac').innerHTML = data.sayac;
+                    }
+                });
+            }, 15000);
+            
+            // Her 60 saniyede bir tüm verileri yenile
+            setInterval(verileriYenile, 60000);
         };
     </script>
 </body>
