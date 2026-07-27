@@ -144,9 +144,15 @@
             border-bottom: 1px solid #ddd;
             font-family: monospace;
             font-size: 14px;
+            display: flex;
+            justify-content: space-between;
         }
         .detay-listesi li:nth-child(even) {
             background: #f0f0f0;
+        }
+        .detay-listesi .basim-numarasi {
+            font-weight: bold;
+            color: #667eea;
         }
 
         .tarih-secici {
@@ -199,72 +205,13 @@
             font-size: 0.8em;
             margin-top: 5px;
         }
-        .yukleniyor {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-
-        /* son 20 kayıt ve sayfalama */
-        .son-kayitlar {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            margin-top: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        .son-kayitlar h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .kayit-listesi {
-            list-style: none;
-            padding: 0;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .kayit-listesi li {
-            padding: 8px 12px;
-            border-bottom: 1px solid #eee;
-            font-family: monospace;
-            display: flex;
-            justify-content: space-between;
-        }
-        .kayit-listesi li:nth-child(even) {
-            background: #f8f9fa;
-        }
-        .sayfalama {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        .sayfalama button {
-            background: #ecf0f1;
-            color: #2c3e50;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .sayfalama button.aktif {
-            background: #667eea;
-            color: white;
-        }
-        .sayfalama button:hover {
-            background: #d5d8dc;
-        }
-        .sayfalama button.aktif:hover {
-            background: #5a67d8;
-        }
 
         .silme-alani {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             margin-top: 10px;
+            margin-bottom: 15px;
         }
         .silme-alani input {
             padding: 8px 12px;
@@ -273,12 +220,21 @@
             flex: 1;
             min-width: 120px;
         }
+        
+        .detay-bilgi {
+            background: #e8f0fe;
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #333;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏭 Abkant Büküm Makinesi</h1>
-        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay + Son 20</div>
+        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay (Son 10 Basım)</div>
 
         <div style="text-align: center;">
             <button class="yenile-btn" onclick="verileriYenile()">🔄 VERİLERİ YENİLE</button>
@@ -300,12 +256,14 @@
                 <button onclick="tarihSec()">📅 TARİH SEÇ</button>
                 <button onclick="tumunuGoster()" style="background:#2ecc71;">📋 TÜMÜ</button>
             </div>
+            
             <!-- Silme alanı -->
             <div class="silme-alani">
                 <input type="date" id="silTarihInput" placeholder="Silinecek tarih">
                 <button class="btn-danger" onclick="tarihSil()">🗑️ SEÇİLEN TARİHİ SİL</button>
                 <button class="btn-danger" onclick="tumunuSilOnay()">⚠️ TÜM VERİLERİ SİL</button>
             </div>
+            
             <div id="toplamBilgi" class="toplam-bilgi"></div>
             <table id="ozetTablo">
                 <thead>
@@ -323,16 +281,8 @@
 
         <div id="detayPanel" class="detay" style="display:none;">
             <h4 id="detayTarih"></h4>
+            <div id="detayBilgi" class="detay-bilgi"></div>
             <ul id="detayListesi" class="detay-listesi"></ul>
-        </div>
-
-        <!-- SON 20 KAYIT + SAYFALAMA -->
-        <div class="son-kayitlar">
-            <h3>📋 SON KAYITLAR (Tüm günlerden son 20)</h3>
-            <ul class="kayit-listesi" id="sonKayitListesi">
-                <li>Yükleniyor...</li>
-            </ul>
-            <div class="sayfalama" id="sayfalamaKonteynir"></div>
         </div>
 
         <div class="footer">
@@ -356,7 +306,6 @@
         const db = firebase.database();
 
         let tumGunlukVerisi = {};
-        let tumBasimlar = []; // tüm günlerin basım listesi (düzleştirilmiş)
 
         // ============ ANLIK VERİ ============
         db.ref('/pedal').on('value', (snapshot) => {
@@ -383,77 +332,12 @@
                 tumGunlukVerisi = veri;
                 tabloyuDoldur(veri);
                 guncelleToplamBilgi(veri);
-                // son 20 kayıt için veriyi hazırla
-                hazirlaTumBasimlar(veri);
-                sonKayitlariGoster(1);
             } else {
                 tumGunlukVerisi = {};
                 document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3">Veri yok</td></tr>';
                 document.getElementById('toplamBilgi').innerHTML = '📊 Toplam kayıtlı gün: 0';
-                document.getElementById('sonKayitListesi').innerHTML = '<li>Kayıt bulunamadı.</li>';
-                document.getElementById('sayfalamaKonteynir').innerHTML = '';
             }
         });
-
-        // ============ TÜM BASIMLARI DÜZLEŞTİR ============
-        function hazirlaTumBasimlar(veri) {
-            const liste = [];
-            for (let tarih in veri) {
-                const gun = veri[tarih];
-                if (gun.basimlar) {
-                    for (let key in gun.basimlar) {
-                        const item = gun.basimlar[key];
-                        liste.push({
-                            tarih: tarih,
-                            saat: item.saat || '00:00:00',
-                            sayac: item.sayac || 0
-                        });
-                    }
-                }
-            }
-            // sayaca göre sırala (büyükten küçüğe = en son basım)
-            liste.sort((a, b) => b.sayac - a.sayac);
-            tumBasimlar = liste;
-        }
-
-        // ============ SON KAYITLARI GÖSTER (SAYFALI) ============
-        let currentPage = 1;
-        const pageSize = 20;
-
-        function sonKayitlariGoster(sayfa) {
-            currentPage = sayfa || 1;
-            const liste = tumBasimlar;
-            const total = liste.length;
-            const totalPages = Math.ceil(total / pageSize) || 1;
-            if (total === 0) {
-                document.getElementById('sonKayitListesi').innerHTML = '<li>Kayıt bulunamadı.</li>';
-                document.getElementById('sayfalamaKonteynir').innerHTML = '';
-                return;
-            }
-
-            const start = (currentPage - 1) * pageSize;
-            const end = Math.min(start + pageSize, total);
-            const sayfaVerisi = liste.slice(start, end);
-
-            const ul = document.getElementById('sonKayitListesi');
-            ul.innerHTML = '';
-            sayfaVerisi.forEach(item => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span>📅 ${item.tarih}</span> <span>🕐 ${item.saat}</span> <span><b>${item.sayac}</b>. basım</span>`;
-                ul.appendChild(li);
-            });
-
-            // sayfalama butonları
-            const konteynir = document.getElementById('sayfalamaKonteynir');
-            konteynir.innerHTML = '';
-            for (let i = 1; i <= totalPages; i++) {
-                const btn = document.createElement('button');
-                btn.innerText = i;
-                if (i === currentPage) btn.classList.add('aktif');
-                btn.onclick = (function(p) { return function() { sonKayitlariGoster(p); }; })(i);
-                konteynir.appendChild(btn);
-            }
-        }
 
         // ============ VERİLERİ YENİLE ============
         async function verileriYenile() {
@@ -468,15 +352,11 @@
                 if (Object.keys(veri).length === 0) {
                     document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3" style="text-align:center">❌ Henüz kayıt yok</td></tr>';
                     document.getElementById('toplamBilgi').innerHTML = '📊 Toplam kayıtlı gün: 0';
-                    document.getElementById('sonKayitListesi').innerHTML = '<li>Kayıt bulunamadı.</li>';
-                    document.getElementById('sayfalamaKonteynir').innerHTML = '';
                     return;
                 }
 
                 tabloyuDoldur(veri);
                 guncelleToplamBilgi(veri);
-                hazirlaTumBasimlar(veri);
-                sonKayitlariGoster(1);
                 document.getElementById('anlikZaman').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
 
             } catch (error) {
@@ -521,35 +401,64 @@
             }
         }
 
-        // ============ DETAY GÖSTER ============
+        // ============ DETAY GÖSTER - SADECE SON 10 ============
         function detayGoster(tarih) {
             const panel = document.getElementById('detayPanel');
             const liste = document.getElementById('detayListesi');
+            const bilgi = document.getElementById('detayBilgi');
+            
             if (!tumGunlukVerisi[tarih]) {
                 document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Veri bulunamadı`;
                 liste.innerHTML = '<li>Bu güne ait kayıt yok</li>';
+                bilgi.innerHTML = '';
                 panel.style.display = 'block';
                 return;
             }
+            
             const gunVerisi = tumGunlukVerisi[tarih];
             if (!gunVerisi.basimlar || Object.keys(gunVerisi.basimlar).length === 0) {
                 document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Detay yok`;
                 liste.innerHTML = '<li>Bu güne ait basım detayı yok</li>';
+                bilgi.innerHTML = '';
                 panel.style.display = 'block';
                 return;
             }
+            
             const basimlarObj = gunVerisi.basimlar;
             const basimlar = Object.values(basimlarObj);
-            basimlar.sort((a, b) => (a.sayac || 0) - (b.sayac || 0));
+            
+            // Sayaca göre BÜYÜKTEN KÜÇÜĞE sırala (en son basım en üstte)
+            basimlar.sort((a, b) => (b.sayac || 0) - (a.sayac || 0));
+            
+            // SADECE SON 10'U AL
+            const son10 = basimlar.slice(0, 10);
+            
             const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
-            document.getElementById('detayTarih').innerHTML =
-                `📅 ${tarih} - Basım Detayları (Toplam: ${basimlar.length} basım, Son: ${toplam})`;
+            const toplamBasim = basimlar.length;
+            
+            document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Basım Detayları`;
+            bilgi.innerHTML = `📊 Toplam ${toplamBasim} basım | Son basım: ${toplam}`;
+            
             liste.innerHTML = '';
-            for (let b of basimlar) {
+            for (let b of son10) {
                 const li = document.createElement('li');
-                li.innerHTML = `🕐 ${b.saat || '00:00:00'} - <b>${b.sayac || 0}</b>. basım`;
+                const saat = b.saat || '00:00:00';
+                const sayac = b.sayac || 0;
+                li.innerHTML = `
+                    <span>🕐 ${saat}</span>
+                    <span class="basim-numarasi">#${sayac}</span>
+                `;
                 liste.appendChild(li);
             }
+            
+            // Eğer 10'dan fazla varsa bilgi ver
+            if (toplamBasim > 10) {
+                const extraLi = document.createElement('li');
+                extraLi.style.cssText = 'background: #e8f0fe; color: #666; font-style: italic; text-align: center;';
+                extraLi.innerHTML = `... ve ${toplamBasim - 10} basım daha`;
+                liste.appendChild(extraLi);
+            }
+            
             panel.style.display = 'block';
             panel.scrollIntoView({ behavior: 'smooth' });
         }
@@ -567,8 +476,10 @@
         // ============ TÜMÜNÜ GÖSTER ============
         function tumunuGoster() {
             if (Object.keys(tumGunlukVerisi).length === 0) verileriYenile();
-            else { tabloyuDoldur(tumGunlukVerisi);
-                document.getElementById('detayPanel').style.display = 'none'; }
+            else { 
+                tabloyuDoldur(tumGunlukVerisi);
+                document.getElementById('detayPanel').style.display = 'none'; 
+            }
         }
 
         // ============ SIRALA ============
@@ -587,7 +498,6 @@
         }
 
         // =================== SİLME İŞLEMLERİ ===================
-        // 1. Seçilen tarihi sil
         function tarihSil() {
             const input = document.getElementById('silTarihInput');
             const secilen = input.value;
@@ -611,7 +521,6 @@
             }
         }
 
-        // 2. Tüm verileri sil
         function tumunuSilOnay() {
             if (confirm('⚠️ TÜM VERİLER KALICI OLARAK SİLİNECEK! Devam etmek istediğinize emin misiniz?')) {
                 db.ref('/gunluk').remove()
