@@ -282,12 +282,13 @@
             font-weight: bold;
             font-size: 0.9rem;
         }
-        .detay-sayfalama button:hover {
+        .detay-sayfalama button:hover:not(:disabled) {
             background: #5a67d8;
         }
         .detay-sayfalama button:disabled {
             background: #ccc;
             cursor: not-allowed;
+            opacity: 0.6;
         }
         .detay-sayfalama .sayfa-bilgi {
             font-weight: 600;
@@ -311,6 +312,10 @@
         }
         .detay-sayfalama .sayfa-butonlari button:hover:not(.aktif) {
             background: #d5d8dc;
+        }
+        .detay-sayfalama .sayfa-nokta {
+            padding: 0 5px;
+            color: #666;
         }
     </style>
 </head>
@@ -596,8 +601,8 @@
                     sayfaButonlari.appendChild(ilkBtn);
                     if (startPage > 2) {
                         const nokta = document.createElement('span');
+                        nokta.className = 'sayfa-nokta';
                         nokta.innerHTML = '…';
-                        nokta.style.padding = '0 5px';
                         sayfaButonlari.appendChild(nokta);
                     }
                 }
@@ -613,8 +618,8 @@
                 if (endPage < toplamSayfa) {
                     if (endPage < toplamSayfa - 1) {
                         const nokta = document.createElement('span');
+                        nokta.className = 'sayfa-nokta';
                         nokta.innerHTML = '…';
-                        nokta.style.padding = '0 5px';
                         sayfaButonlari.appendChild(nokta);
                     }
                     const sonBtn = document.createElement('button');
@@ -738,6 +743,7 @@
                 tabloyuDoldur(tumGunlukVerisi);
                 document.getElementById('detayPanel').style.display = 'none'; 
                 mevcutDetayTarih = null;
+                mevcutDetaySayfa = 1;
             }
         }
 
@@ -773,6 +779,7 @@
                     .then(() => {
                         alert(`✅ ${tarihFormat} silindi.`);
                         mevcutDetayTarih = null;
+                        mevcutDetaySayfa = 1;
                         verileriYenile();
                     })
                     .catch(err => {
@@ -787,6 +794,7 @@
                     .then(() => {
                         alert('✅ Tüm veriler silindi.');
                         mevcutDetayTarih = null;
+                        mevcutDetaySayfa = 1;
                         verileriYenile();
                     })
                     .catch(err => {
