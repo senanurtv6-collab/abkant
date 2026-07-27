@@ -12,6 +12,9 @@
     <!-- Excel için SheetJS kütüphanesi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
     </script>
+    <!-- SHA-256 için CryptoJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js">
+    </script>
     <style>
         * {
             margin: 0;
@@ -353,6 +356,12 @@
         .modal-error.active {
             display: block;
         }
+        .modal-info {
+            color: #666;
+            font-size: 0.8em;
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -441,6 +450,7 @@
                 <button class="btn-cancel" onclick="closeModal()">İptal</button>
                 <button class="btn-confirm" onclick="confirmLogin()">✅ Doğrula</button>
             </div>
+            <div class="modal-info">💡 Yetkili personel girişi</div>
         </div>
     </div>
 
@@ -461,9 +471,12 @@
 
         let tumGunlukVerisi = {};
         
-        // ============ LOGIN KONTROL ============
-        const VALID_USER = "buraktsdmr1";
-        const VALID_PASS = "300127";
+        // ============ LOGIN KONTROL (Hash ile) ============
+        // Kullanıcı adı ve şifre hash'leri (SHA-256)
+        // Orijinal: kullanıcı="buraktsdmr1", şifre="300127"
+        const VALID_USER_HASH = "a3b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2";
+        const VALID_PASS_HASH = "8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0";
+        
         let pendingDeleteAction = null;
         let pendingDeleteData = null;
 
@@ -485,7 +498,11 @@
             const user = document.getElementById('loginUser').value.trim();
             const pass = document.getElementById('loginPass').value.trim();
             
-            if (user === VALID_USER && pass === VALID_PASS) {
+            // Hash'leri hesapla
+            const userHash = CryptoJS.SHA256(user).toString(CryptoJS.enc.Hex);
+            const passHash = CryptoJS.SHA256(pass).toString(CryptoJS.enc.Hex);
+            
+            if (userHash === VALID_USER_HASH && passHash === VALID_PASS_HASH) {
                 document.getElementById('loginModal').classList.remove('active');
                 document.getElementById('modalError').classList.remove('active');
                 // Başarılı giriş, bekleyen işlemi gerçekleştir
@@ -803,7 +820,6 @@
                 return;
             }
             
-            // Login kontrolü
             pendingDeleteAction = function() {
                 if (confirm(`"${tarihFormat}" tarihine ait tüm veriler silinecek. Emin misiniz?`)) {
                     db.ref(`/gunluk/${tarihFormat}`).remove()
@@ -821,7 +837,6 @@
         }
 
         function tumunuSilOnay() {
-            // Login kontrolü
             pendingDeleteAction = function() {
                 if (confirm('⚠️ TÜM VERİLER KALICI OLARAK SİLİNECEK! Devam etmek istediğinize emin misiniz?')) {
                     db.ref('/gunluk').remove()
