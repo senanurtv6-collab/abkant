@@ -5,79 +5,184 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Abkant Büküm Takip Sistemi</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js">
+    </script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 { color: white; text-align: center; margin-bottom: 10px; }
-        .aciklama { text-align: center; color: white; margin-bottom: 30px; font-size: 0.9em; }
-        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .aciklama {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
         .anlik {
             background: white;
             border-radius: 20px;
             padding: 30px;
             text-align: center;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
-        .sayi { font-size: 6em; font-weight: bold; color: #667eea; }
-        .zaman { color: #666; margin-top: 10px; }
-        .pedal-durum { background: #ff6b6b; color: white; border-radius: 10px; padding: 10px; margin-top: 10px; }
-        .bekle-durum { background: #f0f0f0; color: #666; border-radius: 10px; padding: 10px; margin-top: 10px; }
-        
+        .sayi {
+            font-size: 6em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .zaman {
+            color: #666;
+            margin-top: 10px;
+        }
+        .pedal-durum {
+            background: #ff6b6b;
+            color: white;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .bekle-durum {
+            background: #f0f0f0;
+            color: #666;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
         .ozet {
             background: white;
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
-        .ozet h3 { margin-bottom: 15px; color: #333; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
-        th { background: #667eea; color: white; cursor: pointer; }
-        th:hover { background: #5a67d8; }
+        .ozet h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th,
+        td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+        }
+        th:hover {
+            background: #5a67d8;
+        }
         button {
-            background: #667eea; color: white; border: none;
-            padding: 5px 15px; border-radius: 10px; cursor: pointer;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
         }
-        button:hover { background: #5a67d8; }
-        
+        button:hover {
+            background: #5a67d8;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #1e8449;
+        }
+
         .detay {
             background: #f9f9f9;
             border-radius: 15px;
             padding: 15px;
             margin-top: 15px;
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
         }
-        .detay h4 { color: #667eea; margin-bottom: 10px; }
-        .detay-listesi { list-style: none; padding: 0; }
-        .detay-listesi li { 
-            padding: 8px; 
-            border-bottom: 1px solid #ddd; 
+        .detay h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .detay-listesi {
+            list-style: none;
+            padding: 0;
+        }
+        .detay-listesi li {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
             font-family: monospace;
             font-size: 14px;
         }
-        .detay-listesi li:nth-child(even) { background: #f0f0f0; }
-        
-        .tarih-secici { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
-        .tarih-secici input { padding: 10px; border-radius: 10px; border: 1px solid #ddd; flex: 1; min-width: 150px; }
-        
-        .footer { text-align: center; color: white; margin-top: 20px; font-size: 0.8em; }
-        .yenile-btn {
-            background: white; color: #667eea; border: none;
-            padding: 8px 16px; border-radius: 10px; cursor: pointer;
-            margin: 5px; font-weight: bold;
+        .detay-listesi li:nth-child(even) {
+            background: #f0f0f0;
         }
-        .yenile-btn:hover { background: #f0f0f0; }
+
+        .tarih-secici {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .tarih-secici input {
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 0.8em;
+        }
+        .yenile-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+        }
+        .yenile-btn:hover {
+            background: #f0f0f0;
+        }
         .toplam-bilgi {
             background: #f0f0f0;
             padding: 10px;
@@ -99,18 +204,87 @@
             padding: 20px;
             color: #666;
         }
+
+        /* son 20 kayıt ve sayfalama */
+        .son-kayitlar {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .son-kayitlar h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .kayit-listesi {
+            list-style: none;
+            padding: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .kayit-listesi li {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+        .kayit-listesi li:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .sayfalama {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .sayfalama button {
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .sayfalama button.aktif {
+            background: #667eea;
+            color: white;
+        }
+        .sayfalama button:hover {
+            background: #d5d8dc;
+        }
+        .sayfalama button.aktif:hover {
+            background: #5a67d8;
+        }
+
+        .silme-alani {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .silme-alani input {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            flex: 1;
+            min-width: 120px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏭 Abkant Büküm Makinesi</h1>
-        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay</div>
-        
+        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay + Son 20</div>
+
         <div style="text-align: center;">
             <button class="yenile-btn" onclick="verileriYenile()">🔄 VERİLERİ YENİLE</button>
             <button class="yenile-btn" onclick="tumunuGoster()" style="background:#2ecc71;color:white;">📊 TÜMÜNÜ GÖSTER</button>
         </div>
-        
+
         <div class="anlik">
             <h3>🚀 ANLIK PEDAL SAYACI</h3>
             <div class="sayi" id="anlikSayac">0</div>
@@ -118,13 +292,19 @@
             <div id="anlikDurum" class="bekle-durum">⏳ BEKLEMEDE</div>
             <div id="canliBilgi" class="canli-bilgi">🟢 Canlı Bağlantı Aktif</div>
         </div>
-        
+
         <div class="ozet">
             <h3>📊 TÜM GÜNLER</h3>
             <div class="tarih-secici">
                 <input type="date" id="tarihSecici">
                 <button onclick="tarihSec()">📅 TARİH SEÇ</button>
                 <button onclick="tumunuGoster()" style="background:#2ecc71;">📋 TÜMÜ</button>
+            </div>
+            <!-- Silme alanı -->
+            <div class="silme-alani">
+                <input type="date" id="silTarihInput" placeholder="Silinecek tarih">
+                <button class="btn-danger" onclick="tarihSil()">🗑️ SEÇİLEN TARİHİ SİL</button>
+                <button class="btn-danger" onclick="tumunuSilOnay()">⚠️ TÜM VERİLERİ SİL</button>
             </div>
             <div id="toplamBilgi" class="toplam-bilgi"></div>
             <table id="ozetTablo">
@@ -140,12 +320,21 @@
                 </tbody>
             </table>
         </div>
-        
+
         <div id="detayPanel" class="detay" style="display:none;">
             <h4 id="detayTarih"></h4>
             <ul id="detayListesi" class="detay-listesi"></ul>
         </div>
-        
+
+        <!-- SON 20 KAYIT + SAYFALAMA -->
+        <div class="son-kayitlar">
+            <h3>📋 SON KAYITLAR (Tüm günlerden son 20)</h3>
+            <ul class="kayit-listesi" id="sonKayitListesi">
+                <li>Yükleniyor...</li>
+            </ul>
+            <div class="sayfalama" id="sayfalamaKonteynir"></div>
+        </div>
+
         <div class="footer">
             Canlı Takip | Tüm veriler Firebase'de saklanır | Her basım kaydedilir
         </div>
@@ -162,11 +351,12 @@
             messagingSenderId: "572801351430",
             appId: "1:572801351430:web:c0cf32574991d48b6d2887"
         };
-        
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         let tumGunlukVerisi = {};
+        let tumBasimlar = []; // tüm günlerin basım listesi (düzleştirilmiş)
 
         // ============ ANLIK VERİ ============
         db.ref('/pedal').on('value', (snapshot) => {
@@ -176,7 +366,7 @@
                 document.getElementById('anlikZaman').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
                 document.getElementById('anlikDurum').innerHTML = "✅ PEDAL BASILDI";
                 document.getElementById('anlikDurum').className = "pedal-durum";
-                
+
                 setTimeout(() => {
                     if (document.getElementById('anlikSayac').innerHTML == data.sayac) {
                         document.getElementById('anlikDurum').innerHTML = "⏳ BEKLEMEDE";
@@ -193,29 +383,102 @@
                 tumGunlukVerisi = veri;
                 tabloyuDoldur(veri);
                 guncelleToplamBilgi(veri);
+                // son 20 kayıt için veriyi hazırla
+                hazirlaTumBasimlar(veri);
+                sonKayitlariGoster(1);
+            } else {
+                tumGunlukVerisi = {};
+                document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3">Veri yok</td></tr>';
+                document.getElementById('toplamBilgi').innerHTML = '📊 Toplam kayıtlı gün: 0';
+                document.getElementById('sonKayitListesi').innerHTML = '<li>Kayıt bulunamadı.</li>';
+                document.getElementById('sayfalamaKonteynir').innerHTML = '';
             }
         });
 
-        // ============ FIREBASE'DEN TÜM VERİLERİ ÇEK ============
+        // ============ TÜM BASIMLARI DÜZLEŞTİR ============
+        function hazirlaTumBasimlar(veri) {
+            const liste = [];
+            for (let tarih in veri) {
+                const gun = veri[tarih];
+                if (gun.basimlar) {
+                    for (let key in gun.basimlar) {
+                        const item = gun.basimlar[key];
+                        liste.push({
+                            tarih: tarih,
+                            saat: item.saat || '00:00:00',
+                            sayac: item.sayac || 0
+                        });
+                    }
+                }
+            }
+            // sayaca göre sırala (büyükten küçüğe = en son basım)
+            liste.sort((a, b) => b.sayac - a.sayac);
+            tumBasimlar = liste;
+        }
+
+        // ============ SON KAYITLARI GÖSTER (SAYFALI) ============
+        let currentPage = 1;
+        const pageSize = 20;
+
+        function sonKayitlariGoster(sayfa) {
+            currentPage = sayfa || 1;
+            const liste = tumBasimlar;
+            const total = liste.length;
+            const totalPages = Math.ceil(total / pageSize) || 1;
+            if (total === 0) {
+                document.getElementById('sonKayitListesi').innerHTML = '<li>Kayıt bulunamadı.</li>';
+                document.getElementById('sayfalamaKonteynir').innerHTML = '';
+                return;
+            }
+
+            const start = (currentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, total);
+            const sayfaVerisi = liste.slice(start, end);
+
+            const ul = document.getElementById('sonKayitListesi');
+            ul.innerHTML = '';
+            sayfaVerisi.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>📅 ${item.tarih}</span> <span>🕐 ${item.saat}</span> <span><b>${item.sayac}</b>. basım</span>`;
+                ul.appendChild(li);
+            });
+
+            // sayfalama butonları
+            const konteynir = document.getElementById('sayfalamaKonteynir');
+            konteynir.innerHTML = '';
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.innerText = i;
+                if (i === currentPage) btn.classList.add('aktif');
+                btn.onclick = (function(p) { return function() { sonKayitlariGoster(p); }; })(i);
+                konteynir.appendChild(btn);
+            }
+        }
+
+        // ============ VERİLERİ YENİLE ============
         async function verileriYenile() {
             document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3" style="text-align:center">⏳ Yükleniyor...</td></tr>';
             document.getElementById('detayPanel').style.display = 'none';
-            
+
             try {
                 const snapshot = await db.ref('/gunluk').once('value');
                 const veri = snapshot.val() || {};
                 tumGunlukVerisi = veri;
-                
+
                 if (Object.keys(veri).length === 0) {
                     document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3" style="text-align:center">❌ Henüz kayıt yok</td></tr>';
                     document.getElementById('toplamBilgi').innerHTML = '📊 Toplam kayıtlı gün: 0';
+                    document.getElementById('sonKayitListesi').innerHTML = '<li>Kayıt bulunamadı.</li>';
+                    document.getElementById('sayfalamaKonteynir').innerHTML = '';
                     return;
                 }
-                
+
                 tabloyuDoldur(veri);
                 guncelleToplamBilgi(veri);
+                hazirlaTumBasimlar(veri);
+                sonKayitlariGoster(1);
                 document.getElementById('anlikZaman').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
-                
+
             } catch (error) {
                 console.error('Firebase okuma hatası:', error);
                 document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:red;">❌ Veri çekilemedi</td></tr>';
@@ -226,15 +489,11 @@
         function guncelleToplamBilgi(veri) {
             const gunSayisi = Object.keys(veri).length;
             let toplamSayac = 0;
-            
             for (let tarih in veri) {
                 const gun = veri[tarih];
-                if (gun.toplam && gun.toplam.sayac) {
-                    toplamSayac += gun.toplam.sayac;
-                }
+                if (gun.toplam && gun.toplam.sayac) toplamSayac += gun.toplam.sayac;
             }
-            
-            document.getElementById('toplamBilgi').innerHTML = 
+            document.getElementById('toplamBilgi').innerHTML =
                 `📊 Toplam ${gunSayisi} gün | Toplam ${toplamSayac} pedal`;
         }
 
@@ -242,23 +501,18 @@
         function tabloyuDoldur(veri) {
             const tbody = document.getElementById('ozetBody');
             tbody.innerHTML = '';
-            
             const tarihler = Object.keys(veri).sort((a, b) => {
-                const aParts = a.split('-');
-                const bParts = b.split('-');
-                const aDate = new Date(aParts[2], aParts[1] - 1, aParts[0]);
-                const bDate = new Date(bParts[2], bParts[1] - 1, bParts[0]);
-                return bDate - aDate;
+                const aParts = a.split('-'),
+                    bParts = b.split('-');
+                return new Date(bParts[2], bParts[1] - 1, bParts[0]) - new Date(aParts[2], aParts[1] - 1, aParts[0]);
             });
-            
+
             for (let tarih of tarihler) {
                 const gunVerisi = veri[tarih];
                 const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
-                
                 const row = tbody.insertRow();
                 row.insertCell(0).innerHTML = tarih;
                 row.insertCell(1).innerHTML = `<b>${toplam}</b>`;
-                
                 const btn = document.createElement('button');
                 btn.innerHTML = '📋 Detay';
                 btn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
@@ -271,42 +525,31 @@
         function detayGoster(tarih) {
             const panel = document.getElementById('detayPanel');
             const liste = document.getElementById('detayListesi');
-            
             if (!tumGunlukVerisi[tarih]) {
                 document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Veri bulunamadı`;
                 liste.innerHTML = '<li>Bu güne ait kayıt yok</li>';
                 panel.style.display = 'block';
                 return;
             }
-            
             const gunVerisi = tumGunlukVerisi[tarih];
-            
             if (!gunVerisi.basimlar || Object.keys(gunVerisi.basimlar).length === 0) {
                 document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Detay yok`;
                 liste.innerHTML = '<li>Bu güne ait basım detayı yok</li>';
                 panel.style.display = 'block';
                 return;
             }
-            
             const basimlarObj = gunVerisi.basimlar;
             const basimlar = Object.values(basimlarObj);
             basimlar.sort((a, b) => (a.sayac || 0) - (b.sayac || 0));
-            
             const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
-            const basimSayisi = basimlar.length;
-            document.getElementById('detayTarih').innerHTML = 
-                `📅 ${tarih} - Basım Detayları (Toplam: ${basimSayisi} basım, Son: ${toplam})`;
-            
+            document.getElementById('detayTarih').innerHTML =
+                `📅 ${tarih} - Basım Detayları (Toplam: ${basimlar.length} basım, Son: ${toplam})`;
             liste.innerHTML = '';
-            
             for (let b of basimlar) {
                 const li = document.createElement('li');
-                const saat = b.saat || '00:00:00';
-                const sayac = b.sayac || 0;
-                li.innerHTML = `🕐 ${saat} - <b>${sayac}</b>. basım`;
+                li.innerHTML = `🕐 ${b.saat || '00:00:00'} - <b>${b.sayac || 0}</b>. basım`;
                 liste.appendChild(li);
             }
-            
             panel.style.display = 'block';
             panel.scrollIntoView({ behavior: 'smooth' });
         }
@@ -314,49 +557,71 @@
         // ============ TARİH SEÇ ============
         function tarihSec() {
             const secilen = document.getElementById('tarihSecici').value;
-            if (!secilen) {
-                alert('Lütfen bir tarih seçin!');
-                return;
-            }
-            
+            if (!secilen) { alert('Lütfen bir tarih seçin!'); return; }
             const parts = secilen.split('-');
             const tarihFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            
-            if (tumGunlukVerisi[tarihFormat]) {
-                detayGoster(tarihFormat);
-            } else {
-                alert(`❌ ${tarihFormat} tarihine ait kayıt bulunamadı!`);
-            }
+            if (tumGunlukVerisi[tarihFormat]) detayGoster(tarihFormat);
+            else alert(`❌ ${tarihFormat} tarihine ait kayıt bulunamadı!`);
         }
 
         // ============ TÜMÜNÜ GÖSTER ============
         function tumunuGoster() {
-            if (Object.keys(tumGunlukVerisi).length === 0) {
-                verileriYenile();
-            } else {
-                tabloyuDoldur(tumGunlukVerisi);
-                document.getElementById('detayPanel').style.display = 'none';
-            }
+            if (Object.keys(tumGunlukVerisi).length === 0) verileriYenile();
+            else { tabloyuDoldur(tumGunlukVerisi);
+                document.getElementById('detayPanel').style.display = 'none'; }
         }
 
         // ============ SIRALA ============
         function siralaTarih() {
             const tbody = document.getElementById('ozetBody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
-            
             if (rows.length > 0 && rows[0].cells.length === 3) {
                 rows.sort((a, b) => {
-                    const tarihA = a.cells[0].innerText;
-                    const tarihB = b.cells[0].innerText;
-                    const aParts = tarihA.split('-');
-                    const bParts = tarihB.split('-');
-                    const aDate = new Date(aParts[2], aParts[1] - 1, aParts[0]);
-                    const bDate = new Date(bParts[2], bParts[1] - 1, bParts[0]);
-                    return bDate - aDate;
+                    const aParts = a.cells[0].innerText.split('-'),
+                        bParts = b.cells[0].innerText.split('-');
+                    return new Date(bParts[2], bParts[1] - 1, bParts[0]) - new Date(aParts[2], aParts[1] - 1, aParts[0]);
                 });
-                
                 tbody.innerHTML = '';
                 rows.forEach(row => tbody.appendChild(row));
+            }
+        }
+
+        // =================== SİLME İŞLEMLERİ ===================
+        // 1. Seçilen tarihi sil
+        function tarihSil() {
+            const input = document.getElementById('silTarihInput');
+            const secilen = input.value;
+            if (!secilen) { alert('Lütfen silmek için bir tarih seçin.'); return; }
+            const parts = secilen.split('-');
+            const tarihFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
+
+            if (!tumGunlukVerisi[tarihFormat]) {
+                alert(`❌ ${tarihFormat} tarihine ait kayıt bulunamadı!`);
+                return;
+            }
+            if (confirm(`"${tarihFormat}" tarihine ait tüm veriler silinecek. Emin misiniz?`)) {
+                db.ref(`/gunluk/${tarihFormat}`).remove()
+                    .then(() => {
+                        alert(`✅ ${tarihFormat} silindi.`);
+                        verileriYenile();
+                    })
+                    .catch(err => {
+                        alert('Silme hatası: ' + err.message);
+                    });
+            }
+        }
+
+        // 2. Tüm verileri sil
+        function tumunuSilOnay() {
+            if (confirm('⚠️ TÜM VERİLER KALICI OLARAK SİLİNECEK! Devam etmek istediğinize emin misiniz?')) {
+                db.ref('/gunluk').remove()
+                    .then(() => {
+                        alert('✅ Tüm veriler silindi.');
+                        verileriYenile();
+                    })
+                    .catch(err => {
+                        alert('Silme hatası: ' + err.message);
+                    });
             }
         }
 
@@ -367,7 +632,7 @@
             const ay = String(bugun.getMonth() + 1).padStart(2, '0');
             const gun = String(bugun.getDate()).padStart(2, '0');
             document.getElementById('tarihSecici').value = `${yil}-${ay}-${gun}`;
-            
+            document.getElementById('silTarihInput').value = `${yil}-${ay}-${gun}`;
             verileriYenile();
         };
     </script>
