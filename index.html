@@ -147,6 +147,7 @@
         .detay-listesi {
             list-style: none;
             padding: 0;
+            margin: 0;
         }
         .detay-listesi li {
             padding: 8px;
@@ -537,8 +538,19 @@
                 return;
             }
             
+            // BASIMLARI DOĞRU ŞEKİLDE AL
             const basimlarObj = gunVerisi.basimlar;
-            let basimlar = Object.values(basimlarObj);
+            let basimlar = [];
+            
+            // Object.values ile tüm basımları al
+            for (let key in basimlarObj) {
+                if (basimlarObj.hasOwnProperty(key)) {
+                    basimlar.push({
+                        saat: basimlarObj[key].saat || '00:00:00',
+                        sayac: basimlarObj[key].sayac || 0
+                    });
+                }
+            }
             
             // Sayaca göre BÜYÜKTEN KÜÇÜĞE sırala (en son basım en üstte)
             basimlar.sort((a, b) => (b.sayac || 0) - (a.sayac || 0));
