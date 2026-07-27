@@ -259,6 +259,16 @@
             border-radius: 8px;
             border: 1px solid #ddd;
         }
+
+        .aralik-bilgi {
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -296,6 +306,9 @@
                 <button class="btn-excel" onclick="excelAktar(false)">📥 SEÇİLİ ARALIĞI AKTAR</button>
                 <button class="btn-excel" onclick="excelAktar(true)" style="background:#0d5c2e;">📥 TÜMÜNÜ AKTAR</button>
             </div>
+            
+            <!-- Aralık Bilgi -->
+            <div id="aralikBilgi" class="aralik-bilgi"></div>
             
             <!-- Silme alanı -->
             <div class="silme-alani">
@@ -499,7 +512,7 @@
             panel.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // ============ EXCEL AKTAR ============
+        // ============ EXCEL AKTAR - TARİHLER DAHİL ============
         function excelAktar(tumunuMu) {
             if (Object.keys(tumGunlukVerisi).length === 0) {
                 alert('❌ Aktarılacak veri yok!');
@@ -507,9 +520,11 @@
             }
 
             let seciliVeri = {};
+            let aralikMesaji = '';
             
             if (tumunuMu) {
                 seciliVeri = tumGunlukVerisi;
+                aralikMesaji = 'Tüm veriler';
             } else {
                 const baslangic = document.getElementById('excelBaslangic').value;
                 const bitis = document.getElementById('excelBitis').value;
@@ -527,24 +542,28 @@
                     return;
                 }
                 
-                // Tarihleri formatla (DD-MM-YYYY)
-                const startFormatted = formatDateForCompare(baslangic);
-                const endFormatted = formatDateForCompare(bitis);
+                // Başlangıç ve bitiş saatlerini 00:00:00 olarak ayarla (tarih karşılaştırması için)
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
                 
                 for (let tarih in tumGunlukVerisi) {
-                    // Tarihi karşılaştırma için Date objesi
                     const tarihParts = tarih.split('-');
+                    // NOT: Firebase'de tarih formatı DD-MM-YYYY
                     const tarihDate = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
+                    tarihDate.setHours(0, 0, 0, 0);
                     
+                    // Başlangıç ve bitiş DAHİL (>= ve <=)
                     if (tarihDate >= start && tarihDate <= end) {
                         seciliVeri[tarih] = tumGunlukVerisi[tarih];
                     }
                 }
                 
                 if (Object.keys(seciliVeri).length === 0) {
-                    alert('❌ Seçilen tarih aralığında veri bulunamadı!');
+                    alert(`❌ ${baslangic} - ${bitis} tarih aralığında veri bulunamadı!`);
                     return;
                 }
+                
+                aralikMesaji = `${baslangic} - ${bitis} aralığı`;
             }
             
             // Excel verisini hazırla
@@ -558,17 +577,23 @@
             });
             
             let toplamPedal = 0;
+            let gunSayisi = 0;
             for (let tarih of tarihler) {
                 const gun = seciliVeri[tarih];
                 const pedal = gun.toplam ? gun.toplam.sayac || 0 : 0;
                 excelData.push([tarih, pedal]);
                 toplamPedal += pedal;
+                gunSayisi++;
             }
             
-            // Toplam satırı ekle
-            excelData.push(['TOPLAM', toplamPedal]);
+            // Özet bilgi ekle
+            excelData.push(['', '']);
+            excelData.push(['ÖZET', '']);
+            excelData.push(['Toplam Gün', gunSayisi]);
+            excelData.push(['Toplam Pedal', toplamPedal]);
             excelData.push(['', '']);
             excelData.push(['Oluşturulma Tarihi', new Date().toLocaleString('tr-TR')]);
+            excelData.push(['Aralık', aralikMesaji]);
             
             // Excel dosyasını oluştur
             const wb = XLSX.utils.book_new();
@@ -596,14 +621,15 @@
             // Dosyayı indir
             XLSX.writeFile(wb, dosyaAdi);
             
-            const mesaj = tumunuMu ? 'Tüm veriler' : 'Seçilen tarih aralığı';
-            alert(`✅ ${mesaj} başarıyla Excel'e aktarıldı!`);
-        }
-
-        // Yardımcı fonksiyon: Tarihi karşılaştırma formatına çevir
-        function formatDateForCompare(dateStr) {
-            const parts = dateStr.split('-');
-            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            // Aralık bilgisini göster
+            const aralikBilgi = document.getElementById('aralikBilgi');
+            aralikBilgi.style.display = 'block';
+            aralikBilgi.innerHTML = `✅ ${aralikMesaji} başarıyla Excel'e aktarıldı! (${gunSayisi} gün, ${toplamPedal} pedal)`;
+            setTimeout(() => {
+                aralikBilgi.style.display = 'none';
+            }, 5000);
+            
+            alert(`✅ ${aralikMesaji} başarıyla Excel'e aktarıldı!\n📊 ${gunSayisi} gün, ${toplamPedal} pedal`);
         }
 
         // ============ TARİH SEÇ ============
