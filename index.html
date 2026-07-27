@@ -9,7 +9,7 @@
     </script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js">
     </script>
-    <!-- Excel için SheetJS kütüphanesi -->
+    <!-- Excel için SheetJS - DÜZELTİLDİ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
     </script>
     <style>
@@ -119,12 +119,6 @@
         .btn-danger:hover {
             background: #c0392b;
         }
-        .btn-success {
-            background: #27ae60;
-        }
-        .btn-success:hover {
-            background: #1e8449;
-        }
         .btn-excel {
             background: #1d6f42;
         }
@@ -137,7 +131,7 @@
             border-radius: 15px;
             padding: 15px;
             margin-top: 15px;
-            max-height: 500px;
+            max-height: 600px;
             overflow-y: auto;
         }
         .detay h4 {
@@ -147,6 +141,7 @@
         .detay-listesi {
             list-style: none;
             padding: 0;
+            margin: 0;
         }
         .detay-listesi li {
             padding: 8px;
@@ -229,7 +224,7 @@
             flex: 1;
             min-width: 120px;
         }
-        
+
         .detay-bilgi {
             background: #e8f0fe;
             padding: 8px 15px;
@@ -259,12 +254,64 @@
             border-radius: 8px;
             border: 1px solid #ddd;
         }
+
+        .detay-sayfalama {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f0fe;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+        .detay-sayfalama button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .detay-sayfalama button:hover:not(:disabled) {
+            background: #5a67d8;
+        }
+        .detay-sayfalama button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .detay-sayfalama .sayfa-butonlari {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .detay-sayfalama .sayfa-butonlari button {
+            background: #ecf0f1;
+            color: #2c3e50;
+            min-width: 32px;
+            padding: 4px 10px;
+        }
+        .detay-sayfalama .sayfa-butonlari button.aktif {
+            background: #667eea;
+            color: white;
+        }
+        .detay-sayfalama .sayfa-butonlari button:hover:not(.aktif) {
+            background: #d5d8dc;
+        }
+        .detay-sayfalama .sayfa-nokta {
+            padding: 0 5px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏭 Abkant Büküm Makinesi</h1>
-        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay (Son 10 Basım)</div>
+        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay (Sayfalandırılmış)</div>
 
         <div style="text-align: center;">
             <button class="yenile-btn" onclick="verileriYenile()">🔄 VERİLERİ YENİLE</button>
@@ -286,8 +333,7 @@
                 <button onclick="tarihSec()">📅 TARİH SEÇ</button>
                 <button onclick="tumunuGoster()" style="background:#2ecc71;">📋 TÜMÜ</button>
             </div>
-            
-            <!-- Excel Aktarma Alanı -->
+
             <div class="excel-alani">
                 <label>📊 Excel Aktar:</label>
                 <input type="date" id="excelBaslangic">
@@ -296,14 +342,13 @@
                 <button class="btn-excel" onclick="excelAktar(false)">📥 SEÇİLİ ARALIĞI AKTAR</button>
                 <button class="btn-excel" onclick="excelAktar(true)" style="background:#0d5c2e;">📥 TÜMÜNÜ AKTAR</button>
             </div>
-            
-            <!-- Silme alanı -->
+
             <div class="silme-alani">
                 <input type="date" id="silTarihInput" placeholder="Silinecek tarih">
                 <button class="btn-danger" onclick="tarihSil()">🗑️ SEÇİLEN TARİHİ SİL</button>
                 <button class="btn-danger" onclick="tumunuSilOnay()">⚠️ TÜM VERİLERİ SİL</button>
             </div>
-            
+
             <div id="toplamBilgi" class="toplam-bilgi"></div>
             <table id="ozetTablo">
                 <thead>
@@ -323,6 +368,7 @@
             <h4 id="detayTarih"></h4>
             <div id="detayBilgi" class="detay-bilgi"></div>
             <ul id="detayListesi" class="detay-listesi"></ul>
+            <div id="detaySayfalama" class="detay-sayfalama"></div>
         </div>
 
         <div class="footer">
@@ -331,7 +377,6 @@
     </div>
 
     <script>
-        // ============ FIREBASE KONFIG ============
         const firebaseConfig = {
             apiKey: "AIzaSyD-wX1t7jMkYWG_1NpbDnQsgjVc9khrIVk",
             authDomain: "abkant3-e42bd.firebaseapp.com",
@@ -346,8 +391,11 @@
         const db = firebase.database();
 
         let tumGunlukVerisi = {};
+        let mevcutDetayTarih = null;
+        let mevcutDetaySayfa = 1;
+        const PAGE_SIZE = 10;
 
-        // ============ ANLIK VERİ ============
+        // ANLIK
         db.ref('/pedal').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data && data.sayac !== undefined) {
@@ -355,7 +403,6 @@
                 document.getElementById('anlikZaman').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
                 document.getElementById('anlikDurum').innerHTML = "✅ PEDAL BASILDI";
                 document.getElementById('anlikDurum').className = "pedal-durum";
-
                 setTimeout(() => {
                     if (document.getElementById('anlikSayac').innerHTML == data.sayac) {
                         document.getElementById('anlikDurum').innerHTML = "⏳ BEKLEMEDE";
@@ -365,7 +412,7 @@
             }
         });
 
-        // ============ GÜNLÜK VERİLERİ DİNLE ============
+        // GÜNLÜK VERİLER
         db.ref('/gunluk').on('value', (snapshot) => {
             const veri = snapshot.val();
             if (veri) {
@@ -376,36 +423,31 @@
                 tumGunlukVerisi = {};
                 document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3">Veri yok</td></tr>';
                 document.getElementById('toplamBilgi').innerHTML = '📊 Toplam kayıtlı gün: 0';
+                document.getElementById('detayPanel').style.display = 'none';
             }
         });
 
-        // ============ VERİLERİ YENİLE ============
         async function verileriYenile() {
             document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3" style="text-align:center">⏳ Yükleniyor...</td></tr>';
             document.getElementById('detayPanel').style.display = 'none';
-
             try {
                 const snapshot = await db.ref('/gunluk').once('value');
                 const veri = snapshot.val() || {};
                 tumGunlukVerisi = veri;
-
                 if (Object.keys(veri).length === 0) {
                     document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3" style="text-align:center">❌ Henüz kayıt yok</td></tr>';
                     document.getElementById('toplamBilgi').innerHTML = '📊 Toplam kayıtlı gün: 0';
                     return;
                 }
-
                 tabloyuDoldur(veri);
                 guncelleToplamBilgi(veri);
                 document.getElementById('anlikZaman').innerHTML = `🕐 ${new Date().toLocaleString('tr-TR')}`;
-
             } catch (error) {
                 console.error('Firebase okuma hatası:', error);
                 document.getElementById('ozetBody').innerHTML = '<tr><td colspan="3" style="text-align:center;color:red;">❌ Veri çekilemedi</td></tr>';
             }
         }
 
-        // ============ TOPLAM BİLGİ ============
         function guncelleToplamBilgi(veri) {
             const gunSayisi = Object.keys(veri).length;
             let toplamSayac = 0;
@@ -417,7 +459,6 @@
                 `📊 Toplam ${gunSayisi} gün | Toplam ${toplamSayac} pedal`;
         }
 
-        // ============ TABLOYU DOLDUR ============
         function tabloyuDoldur(veri) {
             const tbody = document.getElementById('ozetBody');
             tbody.innerHTML = '';
@@ -426,7 +467,6 @@
                     bParts = b.split('-');
                 return new Date(bParts[2], bParts[1] - 1, bParts[0]) - new Date(aParts[2], aParts[1] - 1, aParts[0]);
             });
-
             for (let tarih of tarihler) {
                 const gunVerisi = veri[tarih];
                 const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
@@ -435,128 +475,216 @@
                 row.insertCell(1).innerHTML = `<b>${toplam}</b>`;
                 const btn = document.createElement('button');
                 btn.innerHTML = '📋 Detay';
-                btn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
+                btn.onclick = (function(t) { return function() { detayGoster(t, 1); }; })(tarih);
                 const cell = row.insertCell(2);
                 cell.appendChild(btn);
             }
         }
 
-        // ============ DETAY GÖSTER - SADECE SON 10 ============
-        function detayGoster(tarih) {
+        // ============ DETAY GÖSTER - TEST EDİLMİŞ ============
+        function detayGoster(tarih, sayfa) {
+            console.log('detayGoster çağrıldı:', tarih, sayfa);
+            
+            mevcutDetayTarih = tarih;
+            mevcutDetaySayfa = sayfa || 1;
+
             const panel = document.getElementById('detayPanel');
             const liste = document.getElementById('detayListesi');
             const bilgi = document.getElementById('detayBilgi');
-            
+            const sayfalamaDiv = document.getElementById('detaySayfalama');
+
             if (!tumGunlukVerisi[tarih]) {
                 document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Veri bulunamadı`;
                 liste.innerHTML = '<li>Bu güne ait kayıt yok</li>';
                 bilgi.innerHTML = '';
+                sayfalamaDiv.innerHTML = '';
                 panel.style.display = 'block';
                 return;
             }
-            
+
             const gunVerisi = tumGunlukVerisi[tarih];
             if (!gunVerisi.basimlar || Object.keys(gunVerisi.basimlar).length === 0) {
                 document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Detay yok`;
                 liste.innerHTML = '<li>Bu güne ait basım detayı yok</li>';
                 bilgi.innerHTML = '';
+                sayfalamaDiv.innerHTML = '';
                 panel.style.display = 'block';
                 return;
             }
-            
+
+            // TÜM BASIMLARI TOPLA
             const basimlarObj = gunVerisi.basimlar;
-            const basimlar = Object.values(basimlarObj);
+            let tumBasimlar = [];
             
-            basimlar.sort((a, b) => (b.sayac || 0) - (a.sayac || 0));
-            const son10 = basimlar.slice(0, 10);
+            console.log('basimlarObj:', basimlarObj);
             
+            // Object.keys ile güvenli dolaş
+            const keys = Object.keys(basimlarObj);
+            console.log('keys:', keys);
+            
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                const item = basimlarObj[key];
+                tumBasimlar.push({
+                    saat: item.saat || '00:00:00',
+                    sayac: item.sayac || 0
+                });
+            }
+
+            console.log('tumBasimlar (ham):', tumBasimlar);
+
+            // Sayaca göre büyükten küçüğe sırala
+            tumBasimlar.sort((a, b) => (b.sayac || 0) - (a.sayac || 0));
+            
+            console.log('tumBasimlar (sıralı):', tumBasimlar);
+
+            const toplamBasim = tumBasimlar.length;
+            const toplamSayfa = Math.ceil(toplamBasim / PAGE_SIZE);
+
+            console.log('toplamBasim:', toplamBasim, 'toplamSayfa:', toplamSayfa);
+
+            // Sayfa kontrol
+            if (mevcutDetaySayfa > toplamSayfa) mevcutDetaySayfa = toplamSayfa;
+            if (mevcutDetaySayfa < 1) mevcutDetaySayfa = 1;
+
+            // Sayfadaki veriler
+            const start = (mevcutDetaySayfa - 1) * PAGE_SIZE;
+            const end = Math.min(start + PAGE_SIZE, toplamBasim);
+            const sayfaVerisi = tumBasimlar.slice(start, end);
+
+            console.log('sayfaVerisi:', sayfaVerisi);
+
             const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
-            const toplamBasim = basimlar.length;
-            
+
             document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Basım Detayları`;
-            bilgi.innerHTML = `📊 Toplam ${toplamBasim} basım | Son basım: ${toplam}`;
-            
+            bilgi.innerHTML = `📊 Toplam ${toplamBasim} basım | Son basım: ${toplam} | Sayfa ${mevcutDetaySayfa}/${toplamSayfa}`;
+
+            // Listeyi doldur
             liste.innerHTML = '';
-            for (let b of son10) {
-                const li = document.createElement('li');
-                const saat = b.saat || '00:00:00';
-                const sayac = b.sayac || 0;
-                li.innerHTML = `
-                    <span>🕐 ${saat}</span>
-                    <span class="basim-numarasi">#${sayac}</span>
-                `;
-                liste.appendChild(li);
+            if (sayfaVerisi.length === 0) {
+                liste.innerHTML = '<li>Bu sayfada kayıt yok</li>';
+            } else {
+                for (let b of sayfaVerisi) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>🕐 ${b.saat}</span>
+                        <span class="basim-numarasi">#${b.sayac}</span>
+                    `;
+                    liste.appendChild(li);
+                }
             }
-            
-            if (toplamBasim > 10) {
-                const extraLi = document.createElement('li');
-                extraLi.style.cssText = 'background: #e8f0fe; color: #666; font-style: italic; text-align: center;';
-                extraLi.innerHTML = `... ve ${toplamBasim - 10} basım daha`;
-                liste.appendChild(extraLi);
+
+            // Sayfalama
+            sayfalamaDiv.innerHTML = '';
+            if (toplamBasim > PAGE_SIZE) {
+                // Önceki
+                const oncekiBtn = document.createElement('button');
+                oncekiBtn.innerHTML = '◀ Önceki';
+                oncekiBtn.disabled = (mevcutDetaySayfa === 1);
+                oncekiBtn.onclick = function() {
+                    if (mevcutDetaySayfa > 1) detayGoster(tarih, mevcutDetaySayfa - 1);
+                };
+                sayfalamaDiv.appendChild(oncekiBtn);
+
+                // Sayfa numaraları
+                const sayfaButonlari = document.createElement('div');
+                sayfaButonlari.className = 'sayfa-butonlari';
+
+                let startPage = Math.max(1, mevcutDetaySayfa - 2);
+                let endPage = Math.min(toplamSayfa, mevcutDetaySayfa + 2);
+
+                if (startPage > 1) {
+                    const ilkBtn = document.createElement('button');
+                    ilkBtn.innerHTML = '1';
+                    ilkBtn.onclick = function() { detayGoster(tarih, 1); };
+                    sayfaButonlari.appendChild(ilkBtn);
+                    if (startPage > 2) {
+                        const nokta = document.createElement('span');
+                        nokta.className = 'sayfa-nokta';
+                        nokta.innerHTML = '…';
+                        sayfaButonlari.appendChild(nokta);
+                    }
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const btn = document.createElement('button');
+                    btn.innerHTML = i;
+                    if (i === mevcutDetaySayfa) btn.classList.add('aktif');
+                    btn.onclick = (function(p) { return function() { detayGoster(tarih, p); }; })(i);
+                    sayfaButonlari.appendChild(btn);
+                }
+
+                if (endPage < toplamSayfa) {
+                    if (endPage < toplamSayfa - 1) {
+                        const nokta = document.createElement('span');
+                        nokta.className = 'sayfa-nokta';
+                        nokta.innerHTML = '…';
+                        sayfaButonlari.appendChild(nokta);
+                    }
+                    const sonBtn = document.createElement('button');
+                    sonBtn.innerHTML = toplamSayfa;
+                    sonBtn.onclick = function() { detayGoster(tarih, toplamSayfa); };
+                    sayfaButonlari.appendChild(sonBtn);
+                }
+
+                sayfalamaDiv.appendChild(sayfaButonlari);
+
+                // Sonraki
+                const sonrakiBtn = document.createElement('button');
+                sonrakiBtn.innerHTML = 'Sonraki ▶';
+                sonrakiBtn.disabled = (mevcutDetaySayfa === toplamSayfa);
+                sonrakiBtn.onclick = function() {
+                    if (mevcutDetaySayfa < toplamSayfa) detayGoster(tarih, mevcutDetaySayfa + 1);
+                };
+                sayfalamaDiv.appendChild(sonrakiBtn);
             }
-            
+
             panel.style.display = 'block';
             panel.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // ============ EXCEL AKTAR ============
+        // ============ EXCEL ============
         function excelAktar(tumunuMu) {
             if (Object.keys(tumGunlukVerisi).length === 0) {
                 alert('❌ Aktarılacak veri yok!');
                 return;
             }
-
             let seciliVeri = {};
-            
             if (tumunuMu) {
                 seciliVeri = tumGunlukVerisi;
             } else {
                 const baslangic = document.getElementById('excelBaslangic').value;
                 const bitis = document.getElementById('excelBitis').value;
-                
                 if (!baslangic || !bitis) {
                     alert('❌ Lütfen başlangıç ve bitiş tarihlerini seçin!');
                     return;
                 }
-                
-                // Tarihleri kontrol et
                 const start = new Date(baslangic);
                 const end = new Date(bitis);
                 if (start > end) {
                     alert('❌ Başlangıç tarihi bitiş tarihinden büyük olamaz!');
                     return;
                 }
-                
-                // Tarihleri formatla (DD-MM-YYYY)
-                const startFormatted = formatDateForCompare(baslangic);
-                const endFormatted = formatDateForCompare(bitis);
-                
                 for (let tarih in tumGunlukVerisi) {
-                    // Tarihi karşılaştırma için Date objesi
                     const tarihParts = tarih.split('-');
                     const tarihDate = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
-                    
                     if (tarihDate >= start && tarihDate <= end) {
                         seciliVeri[tarih] = tumGunlukVerisi[tarih];
                     }
                 }
-                
                 if (Object.keys(seciliVeri).length === 0) {
                     alert('❌ Seçilen tarih aralığında veri bulunamadı!');
                     return;
                 }
             }
-            
-            // Excel verisini hazırla
-            const excelData = [];
-            excelData.push(['Tarih', 'Toplam Pedal']); // Başlık satırı
-            
-            // Tarihleri sırala (eski->yeni)
+            const excelData = [
+                ['Tarih', 'Toplam Pedal']
+            ];
             const tarihler = Object.keys(seciliVeri).sort((a, b) => {
-                const aParts = a.split('-'), bParts = b.split('-');
+                const aParts = a.split('-'),
+                    bParts = b.split('-');
                 return new Date(aParts[2], aParts[1] - 1, aParts[0]) - new Date(bParts[2], bParts[1] - 1, bParts[0]);
             });
-            
             let toplamPedal = 0;
             for (let tarih of tarihler) {
                 const gun = seciliVeri[tarih];
@@ -564,68 +692,51 @@
                 excelData.push([tarih, pedal]);
                 toplamPedal += pedal;
             }
-            
-            // Toplam satırı ekle
             excelData.push(['TOPLAM', toplamPedal]);
             excelData.push(['', '']);
             excelData.push(['Oluşturulma Tarihi', new Date().toLocaleString('tr-TR')]);
-            
-            // Excel dosyasını oluştur
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(excelData);
-            
-            // Sütun genişliklerini ayarla
-            ws['!cols'] = [
-                { wch: 15 },
-                { wch: 15 }
-            ];
-            
-            XLSX.utils.book_append_sheet(wb, ws, 'Abkant Verileri');
-            
-            // Dosya adını oluştur
-            let dosyaAdi = 'Abkant_Verileri';
-            if (tumunuMu) {
-                dosyaAdi += '_Tumu';
-            } else {
-                const baslangic = document.getElementById('excelBaslangic').value;
-                const bitis = document.getElementById('excelBitis').value;
-                dosyaAdi += `_${baslangic}_${bitis}`;
+
+            try {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(excelData);
+                ws['!cols'] = [{ wch: 15 }, { wch: 15 }];
+                XLSX.utils.book_append_sheet(wb, ws, 'Abkant Verileri');
+
+                let dosyaAdi = 'Abkant_Verileri';
+                if (tumunuMu) {
+                    dosyaAdi += '_Tumu';
+                } else {
+                    const baslangic = document.getElementById('excelBaslangic').value;
+                    const bitis = document.getElementById('excelBitis').value;
+                    dosyaAdi += `_${baslangic}_${bitis}`;
+                }
+                dosyaAdi += `_${new Date().toISOString().slice(0,10)}.xlsx`;
+                XLSX.writeFile(wb, dosyaAdi);
+                alert(`✅ ${tumunuMu ? 'Tüm veriler' : 'Seçilen tarih aralığı'} başarıyla Excel'e aktarıldı!`);
+            } catch (e) {
+                alert('Excel oluşturulurken hata: ' + e.message);
             }
-            dosyaAdi += `_${new Date().toISOString().slice(0,10)}.xlsx`;
-            
-            // Dosyayı indir
-            XLSX.writeFile(wb, dosyaAdi);
-            
-            const mesaj = tumunuMu ? 'Tüm veriler' : 'Seçilen tarih aralığı';
-            alert(`✅ ${mesaj} başarıyla Excel'e aktarıldı!`);
         }
 
-        // Yardımcı fonksiyon: Tarihi karşılaştırma formatına çevir
-        function formatDateForCompare(dateStr) {
-            const parts = dateStr.split('-');
-            return `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-
-        // ============ TARİH SEÇ ============
         function tarihSec() {
             const secilen = document.getElementById('tarihSecici').value;
             if (!secilen) { alert('Lütfen bir tarih seçin!'); return; }
             const parts = secilen.split('-');
             const tarihFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            if (tumGunlukVerisi[tarihFormat]) detayGoster(tarihFormat);
+            if (tumGunlukVerisi[tarihFormat]) detayGoster(tarihFormat, 1);
             else alert(`❌ ${tarihFormat} tarihine ait kayıt bulunamadı!`);
         }
 
-        // ============ TÜMÜNÜ GÖSTER ============
         function tumunuGoster() {
             if (Object.keys(tumGunlukVerisi).length === 0) verileriYenile();
-            else { 
+            else {
                 tabloyuDoldur(tumGunlukVerisi);
-                document.getElementById('detayPanel').style.display = 'none'; 
+                document.getElementById('detayPanel').style.display = 'none';
+                mevcutDetayTarih = null;
+                mevcutDetaySayfa = 1;
             }
         }
 
-        // ============ SIRALA ============
         function siralaTarih() {
             const tbody = document.getElementById('ozetBody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
@@ -640,14 +751,12 @@
             }
         }
 
-        // =================== SİLME İŞLEMLERİ ===================
         function tarihSil() {
             const input = document.getElementById('silTarihInput');
             const secilen = input.value;
             if (!secilen) { alert('Lütfen silmek için bir tarih seçin.'); return; }
             const parts = secilen.split('-');
             const tarihFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
-
             if (!tumGunlukVerisi[tarihFormat]) {
                 alert(`❌ ${tarihFormat} tarihine ait kayıt bulunamadı!`);
                 return;
@@ -656,6 +765,8 @@
                 db.ref(`/gunluk/${tarihFormat}`).remove()
                     .then(() => {
                         alert(`✅ ${tarihFormat} silindi.`);
+                        mevcutDetayTarih = null;
+                        mevcutDetaySayfa = 1;
                         verileriYenile();
                     })
                     .catch(err => {
@@ -669,6 +780,8 @@
                 db.ref('/gunluk').remove()
                     .then(() => {
                         alert('✅ Tüm veriler silindi.');
+                        mevcutDetayTarih = null;
+                        mevcutDetaySayfa = 1;
                         verileriYenile();
                     })
                     .catch(err => {
@@ -677,18 +790,14 @@
             }
         }
 
-        // ============ SAYFA YÜKLENİNCE ============
         window.onload = function() {
             const bugun = new Date();
             const yil = bugun.getFullYear();
             const ay = String(bugun.getMonth() + 1).padStart(2, '0');
             const gun = String(bugun.getDate()).padStart(2, '0');
             const bugunStr = `${yil}-${ay}-${gun}`;
-            
             document.getElementById('tarihSecici').value = bugunStr;
             document.getElementById('silTarihInput').value = bugunStr;
-            
-            // Excel için varsayılan olarak son 7 günü seç
             const son7Gun = new Date();
             son7Gun.setDate(son7Gun.getDate() - 7);
             const yil7 = son7Gun.getFullYear();
@@ -696,7 +805,6 @@
             const gun7 = String(son7Gun.getDate()).padStart(2, '0');
             document.getElementById('excelBaslangic').value = `${yil7}-${ay7}-${gun7}`;
             document.getElementById('excelBitis').value = bugunStr;
-            
             verileriYenile();
         };
     </script>
