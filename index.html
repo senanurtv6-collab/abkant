@@ -9,6 +9,9 @@
     </script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js">
     </script>
+    <!-- Excel için SheetJS kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    </script>
     <style>
         * {
             margin: 0;
@@ -122,6 +125,12 @@
         .btn-success:hover {
             background: #1e8449;
         }
+        .btn-excel {
+            background: #1d6f42;
+        }
+        .btn-excel:hover {
+            background: #145a34;
+        }
 
         .detay {
             background: #f9f9f9;
@@ -229,6 +238,27 @@
             font-size: 0.9em;
             color: #333;
         }
+
+        .excel-alani {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            align-items: center;
+        }
+        .excel-alani label {
+            font-weight: 600;
+            color: #333;
+        }
+        .excel-alani input[type="date"] {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
@@ -255,6 +285,16 @@
                 <input type="date" id="tarihSecici">
                 <button onclick="tarihSec()">📅 TARİH SEÇ</button>
                 <button onclick="tumunuGoster()" style="background:#2ecc71;">📋 TÜMÜ</button>
+            </div>
+            
+            <!-- Excel Aktarma Alanı -->
+            <div class="excel-alani">
+                <label>📊 Excel Aktar:</label>
+                <input type="date" id="excelBaslangic">
+                <span>ile</span>
+                <input type="date" id="excelBitis">
+                <button class="btn-excel" onclick="excelAktar(false)">📥 SEÇİLİ ARALIĞI AKTAR</button>
+                <button class="btn-excel" onclick="excelAktar(true)" style="background:#0d5c2e;">📥 TÜMÜNÜ AKTAR</button>
             </div>
             
             <!-- Silme alanı -->
@@ -427,10 +467,7 @@
             const basimlarObj = gunVerisi.basimlar;
             const basimlar = Object.values(basimlarObj);
             
-            // Sayaca göre BÜYÜKTEN KÜÇÜĞE sırala (en son basım en üstte)
             basimlar.sort((a, b) => (b.sayac || 0) - (a.sayac || 0));
-            
-            // SADECE SON 10'U AL
             const son10 = basimlar.slice(0, 10);
             
             const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
@@ -451,7 +488,6 @@
                 liste.appendChild(li);
             }
             
-            // Eğer 10'dan fazla varsa bilgi ver
             if (toplamBasim > 10) {
                 const extraLi = document.createElement('li');
                 extraLi.style.cssText = 'background: #e8f0fe; color: #666; font-style: italic; text-align: center;';
@@ -461,6 +497,113 @@
             
             panel.style.display = 'block';
             panel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ============ EXCEL AKTAR ============
+        function excelAktar(tumunuMu) {
+            if (Object.keys(tumGunlukVerisi).length === 0) {
+                alert('❌ Aktarılacak veri yok!');
+                return;
+            }
+
+            let seciliVeri = {};
+            
+            if (tumunuMu) {
+                seciliVeri = tumGunlukVerisi;
+            } else {
+                const baslangic = document.getElementById('excelBaslangic').value;
+                const bitis = document.getElementById('excelBitis').value;
+                
+                if (!baslangic || !bitis) {
+                    alert('❌ Lütfen başlangıç ve bitiş tarihlerini seçin!');
+                    return;
+                }
+                
+                // Tarihleri kontrol et
+                const start = new Date(baslangic);
+                const end = new Date(bitis);
+                if (start > end) {
+                    alert('❌ Başlangıç tarihi bitiş tarihinden büyük olamaz!');
+                    return;
+                }
+                
+                // Tarihleri formatla (DD-MM-YYYY)
+                const startFormatted = formatDateForCompare(baslangic);
+                const endFormatted = formatDateForCompare(bitis);
+                
+                for (let tarih in tumGunlukVerisi) {
+                    // Tarihi karşılaştırma için Date objesi
+                    const tarihParts = tarih.split('-');
+                    const tarihDate = new Date(tarihParts[2], tarihParts[1] - 1, tarihParts[0]);
+                    
+                    if (tarihDate >= start && tarihDate <= end) {
+                        seciliVeri[tarih] = tumGunlukVerisi[tarih];
+                    }
+                }
+                
+                if (Object.keys(seciliVeri).length === 0) {
+                    alert('❌ Seçilen tarih aralığında veri bulunamadı!');
+                    return;
+                }
+            }
+            
+            // Excel verisini hazırla
+            const excelData = [];
+            excelData.push(['Tarih', 'Toplam Pedal']); // Başlık satırı
+            
+            // Tarihleri sırala (eski->yeni)
+            const tarihler = Object.keys(seciliVeri).sort((a, b) => {
+                const aParts = a.split('-'), bParts = b.split('-');
+                return new Date(aParts[2], aParts[1] - 1, aParts[0]) - new Date(bParts[2], bParts[1] - 1, bParts[0]);
+            });
+            
+            let toplamPedal = 0;
+            for (let tarih of tarihler) {
+                const gun = seciliVeri[tarih];
+                const pedal = gun.toplam ? gun.toplam.sayac || 0 : 0;
+                excelData.push([tarih, pedal]);
+                toplamPedal += pedal;
+            }
+            
+            // Toplam satırı ekle
+            excelData.push(['TOPLAM', toplamPedal]);
+            excelData.push(['', '']);
+            excelData.push(['Oluşturulma Tarihi', new Date().toLocaleString('tr-TR')]);
+            
+            // Excel dosyasını oluştur
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(excelData);
+            
+            // Sütun genişliklerini ayarla
+            ws['!cols'] = [
+                { wch: 15 },
+                { wch: 15 }
+            ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, 'Abkant Verileri');
+            
+            // Dosya adını oluştur
+            let dosyaAdi = 'Abkant_Verileri';
+            if (tumunuMu) {
+                dosyaAdi += '_Tumu';
+            } else {
+                const baslangic = document.getElementById('excelBaslangic').value;
+                const bitis = document.getElementById('excelBitis').value;
+                dosyaAdi += `_${baslangic}_${bitis}`;
+            }
+            dosyaAdi += `_${new Date().toISOString().slice(0,10)}.xlsx`;
+            
+            // Dosyayı indir
+            XLSX.writeFile(wb, dosyaAdi);
+            
+            const mesaj = tumunuMu ? 'Tüm veriler' : 'Seçilen tarih aralığı';
+            alert(`✅ ${mesaj} başarıyla Excel'e aktarıldı!`);
+        }
+
+        // Yardımcı fonksiyon: Tarihi karşılaştırma formatına çevir
+        function formatDateForCompare(dateStr) {
+            const parts = dateStr.split('-');
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
 
         // ============ TARİH SEÇ ============
@@ -540,8 +683,20 @@
             const yil = bugun.getFullYear();
             const ay = String(bugun.getMonth() + 1).padStart(2, '0');
             const gun = String(bugun.getDate()).padStart(2, '0');
-            document.getElementById('tarihSecici').value = `${yil}-${ay}-${gun}`;
-            document.getElementById('silTarihInput').value = `${yil}-${ay}-${gun}`;
+            const bugunStr = `${yil}-${ay}-${gun}`;
+            
+            document.getElementById('tarihSecici').value = bugunStr;
+            document.getElementById('silTarihInput').value = bugunStr;
+            
+            // Excel için varsayılan olarak son 7 günü seç
+            const son7Gun = new Date();
+            son7Gun.setDate(son7Gun.getDate() - 7);
+            const yil7 = son7Gun.getFullYear();
+            const ay7 = String(son7Gun.getMonth() + 1).padStart(2, '0');
+            const gun7 = String(son7Gun.getDate()).padStart(2, '0');
+            document.getElementById('excelBaslangic').value = `${yil7}-${ay7}-${gun7}`;
+            document.getElementById('excelBitis').value = bugunStr;
+            
             verileriYenile();
         };
     </script>
