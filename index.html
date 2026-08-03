@@ -140,7 +140,7 @@
             border-radius: 15px;
             padding: 15px;
             margin-top: 15px;
-            max-height: 500px;
+            max-height: 600px;
             overflow-y: auto;
         }
         .detay h4 {
@@ -165,6 +165,10 @@
         .detay-listesi .basim-numarasi {
             font-weight: bold;
             color: #667eea;
+        }
+        .detay-listesi .basim-sirasi {
+            color: #999;
+            font-size: 12px;
         }
 
         .tarih-secici {
@@ -240,6 +244,11 @@
             margin-bottom: 10px;
             font-size: 0.9em;
             color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .excel-alani {
@@ -271,6 +280,29 @@
             margin: 10px 0;
             font-size: 0.9em;
             display: none;
+        }
+
+        .detay-kontrol {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .detay-kontrol button {
+            padding: 6px 14px;
+            font-size: 0.85rem;
+        }
+        .btn-tumunu-goster {
+            background: #2ecc71;
+        }
+        .btn-tumunu-goster:hover {
+            background: #27ae60;
+        }
+        .btn-sadece-son10 {
+            background: #f39c12;
+        }
+        .btn-sadece-son10:hover {
+            background: #e67e22;
         }
 
         /* Login Modal */
@@ -362,12 +394,21 @@
             text-align: center;
             margin-top: 10px;
         }
+
+        /* Detayda gösterim modu göstergesi */
+        .gosterim-modu {
+            font-size: 0.85em;
+            color: #666;
+            background: #f0f0f0;
+            padding: 4px 12px;
+            border-radius: 15px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏭 Abkant Büküm Makinesi</h1>
-        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay (Son 10 Basım)</div>
+        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay (Tüm Basımlar)</div>
 
         <div style="text-align: center;">
             <button class="yenile-btn" onclick="verileriYenile()">🔄 VERİLERİ YENİLE</button>
@@ -426,7 +467,14 @@
         </div>
 
         <div id="detayPanel" class="detay" style="display:none;">
-            <h4 id="detayTarih"></h4>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                <h4 id="detayTarih" style="margin:0;"></h4>
+                <div class="detay-kontrol">
+                    <span class="gosterim-modu" id="gosterimModu">📋 Tümü gösteriliyor</span>
+                    <button class="btn-tumunu-goster" onclick="detayGoster(mevcutDetayTarih, true)">📋 Tümünü Göster</button>
+                    <button class="btn-sadece-son10" onclick="detayGoster(mevcutDetayTarih, false)">🔟 Son 10</button>
+                </div>
+            </div>
             <div id="detayBilgi" class="detay-bilgi"></div>
             <ul id="detayListesi" class="detay-listesi"></ul>
         </div>
@@ -470,10 +518,10 @@
         const db = firebase.database();
 
         let tumGunlukVerisi = {};
+        let mevcutDetayTarih = null;
+        let mevcutGosterimTumu = true; // true = tümü, false = son 10
         
         // ============ LOGIN KONTROL (Hash ile) ============
-        // Kullanıcı adı ve şifre hash'leri (SHA-256)
-        // Orijinal: kullanıcı="buraktsdmr1", şifre="300127"
         const VALID_USER_HASH = "a3b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2";
         const VALID_PASS_HASH = "8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0";
         
@@ -498,14 +546,12 @@
             const user = document.getElementById('loginUser').value.trim();
             const pass = document.getElementById('loginPass').value.trim();
             
-            // Hash'leri hesapla
             const userHash = CryptoJS.SHA256(user).toString(CryptoJS.enc.Hex);
             const passHash = CryptoJS.SHA256(pass).toString(CryptoJS.enc.Hex);
             
             if (userHash === VALID_USER_HASH && passHash === VALID_PASS_HASH) {
                 document.getElementById('loginModal').classList.remove('active');
                 document.getElementById('modalError').classList.remove('active');
-                // Başarılı giriş, bekleyen işlemi gerçekleştir
                 if (pendingDeleteAction) {
                     pendingDeleteAction();
                     pendingDeleteAction = null;
@@ -606,17 +652,21 @@
                 row.insertCell(1).innerHTML = `<b>${toplam}</b>`;
                 const btn = document.createElement('button');
                 btn.innerHTML = '📋 Detay';
-                btn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
+                btn.onclick = (function(t) { return function() { detayGoster(t, true); }; })(tarih);
                 const cell = row.insertCell(2);
                 cell.appendChild(btn);
             }
         }
 
-        // ============ DETAY GÖSTER - SADECE SON 10 ============
-        function detayGoster(tarih) {
+        // ============ DETAY GÖSTER - TÜMÜ VEYA SON 10 ============
+        function detayGoster(tarih, tumunuGoster = true) {
+            mevcutDetayTarih = tarih;
+            mevcutGosterimTumu = tumunuGoster;
+            
             const panel = document.getElementById('detayPanel');
             const liste = document.getElementById('detayListesi');
             const bilgi = document.getElementById('detayBilgi');
+            const moduSpan = document.getElementById('gosterimModu');
             
             if (!tumGunlukVerisi[tarih]) {
                 document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Veri bulunamadı`;
@@ -639,30 +689,61 @@
             const basimlar = Object.values(basimlarObj);
             
             basimlar.sort((a, b) => (b.sayac || 0) - (a.sayac || 0));
-            const son10 = basimlar.slice(0, 10);
+            
+            let gosterilecekBasimlar;
+            let gosterimModu;
+            
+            if (tumunuGoster) {
+                gosterilecekBasimlar = basimlar;
+                gosterimModu = '📋 Tümü gösteriliyor';
+            } else {
+                gosterilecekBasimlar = basimlar.slice(0, 10);
+                gosterimModu = '🔟 Son 10 gösteriliyor';
+            }
             
             const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
             const toplamBasim = basimlar.length;
             
             document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Basım Detayları`;
-            bilgi.innerHTML = `📊 Toplam ${toplamBasim} basım | Son basım: ${toplam}`;
+            moduSpan.textContent = gosterimModu;
+            
+            bilgi.innerHTML = `
+                <span>📊 Toplam ${toplamBasim} basım | Son basım: #${toplam}</span>
+                <span>${gosterilecekBasimlar.length} basım gösteriliyor</span>
+            `;
             
             liste.innerHTML = '';
-            for (let b of son10) {
+            
+            // Basım numarasına göre sıralı gösterim (en büyükten küçüğe)
+            let gosterilenSayac = 0;
+            for (let b of gosterilecekBasimlar) {
                 const li = document.createElement('li');
                 const saat = b.saat || '00:00:00';
                 const sayac = b.sayac || 0;
+                gosterilenSayac++;
                 li.innerHTML = `
-                    <span>🕐 ${saat}</span>
+                    <span>
+                        <span class="basim-sirasi">#${gosterilenSayac}</span>
+                        🕐 ${saat}
+                    </span>
                     <span class="basim-numarasi">#${sayac}</span>
                 `;
                 liste.appendChild(li);
             }
             
-            if (toplamBasim > 10) {
+            // Eğer tümü gösteriliyorsa ve daha fazla kayıt varsa göster
+            if (tumunuGoster && toplamBasim > gosterilecekBasimlar.length) {
                 const extraLi = document.createElement('li');
                 extraLi.style.cssText = 'background: #e8f0fe; color: #666; font-style: italic; text-align: center;';
-                extraLi.innerHTML = `... ve ${toplamBasim - 10} basım daha`;
+                extraLi.innerHTML = `... ve ${toplamBasim - gosterilecekBasimlar.length} basım daha var (hepsi gösteriliyor)`;
+                liste.appendChild(extraLi);
+            }
+            
+            // Eğer son 10 gösteriliyorsa ve daha fazla kayıt varsa
+            if (!tumunuGoster && toplamBasim > 10) {
+                const extraLi = document.createElement('li');
+                extraLi.style.cssText = 'background: #e8f0fe; color: #666; font-style: italic; text-align: center;';
+                extraLi.innerHTML = `... ve ${toplamBasim - 10} basım daha var. "Tümünü Göster" butonuna tıklayın.`;
                 liste.appendChild(extraLi);
             }
             
@@ -670,7 +751,7 @@
             panel.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // ============ EXCEL AKTAR - TARİHLER DAHİL ============
+        // ============ EXCEL AKTAR ============
         function excelAktar(tumunuMu) {
             if (Object.keys(tumGunlukVerisi).length === 0) {
                 alert('❌ Aktarılacak veri yok!');
@@ -721,7 +802,7 @@
             }
             
             const excelData = [];
-            excelData.push(['Tarih', 'Toplam Pedal']);
+            excelData.push(['Tarih', 'Toplam Pedal', 'Basım Sayısı']);
             
             const tarihler = Object.keys(seciliVeri).sort((a, b) => {
                 const aParts = a.split('-'), bParts = b.split('-');
@@ -733,22 +814,23 @@
             for (let tarih of tarihler) {
                 const gun = seciliVeri[tarih];
                 const pedal = gun.toplam ? gun.toplam.sayac || 0 : 0;
-                excelData.push([tarih, pedal]);
+                const basimSayisi = gun.basimlar ? Object.keys(gun.basimlar).length : 0;
+                excelData.push([tarih, pedal, basimSayisi]);
                 toplamPedal += pedal;
                 gunSayisi++;
             }
             
-            excelData.push(['', '']);
-            excelData.push(['ÖZET', '']);
-            excelData.push(['Toplam Gün', gunSayisi]);
-            excelData.push(['Toplam Pedal', toplamPedal]);
-            excelData.push(['', '']);
-            excelData.push(['Oluşturulma Tarihi', new Date().toLocaleString('tr-TR')]);
-            excelData.push(['Aralık', aralikMesaji]);
+            excelData.push(['', '', '']);
+            excelData.push(['ÖZET', '', '']);
+            excelData.push(['Toplam Gün', gunSayisi, '']);
+            excelData.push(['Toplam Pedal', toplamPedal, '']);
+            excelData.push(['', '', '']);
+            excelData.push(['Oluşturulma Tarihi', new Date().toLocaleString('tr-TR'), '']);
+            excelData.push(['Aralık', aralikMesaji, '']);
             
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(excelData);
-            ws['!cols'] = [{ wch: 15 }, { wch: 15 }];
+            ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 15 }];
             XLSX.utils.book_append_sheet(wb, ws, 'Abkant Verileri');
             
             let dosyaAdi = 'Abkant_Verileri';
@@ -779,7 +861,7 @@
             if (!secilen) { alert('Lütfen bir tarih seçin!'); return; }
             const parts = secilen.split('-');
             const tarihFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            if (tumGunlukVerisi[tarihFormat]) detayGoster(tarihFormat);
+            if (tumGunlukVerisi[tarihFormat]) detayGoster(tarihFormat, true);
             else alert(`❌ ${tarihFormat} tarihine ait kayıt bulunamadı!`);
         }
 
@@ -807,7 +889,7 @@
             }
         }
 
-        // =================== SİLME İŞLEMLERİ (Login Kontrollü) ===================
+        // =================== SİLME İŞLEMLERİ ===================
         function tarihSil() {
             const input = document.getElementById('silTarihInput');
             const secilen = input.value;
