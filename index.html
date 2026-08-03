@@ -166,10 +166,6 @@
             font-weight: bold;
             color: #667eea;
         }
-        .detay-listesi .basim-sirasi {
-            color: #999;
-            font-size: 12px;
-        }
 
         .tarih-secici {
             display: flex;
@@ -282,29 +278,6 @@
             display: none;
         }
 
-        .detay-kontrol {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .detay-kontrol button {
-            padding: 6px 14px;
-            font-size: 0.85rem;
-        }
-        .btn-tumunu-goster {
-            background: #2ecc71;
-        }
-        .btn-tumunu-goster:hover {
-            background: #27ae60;
-        }
-        .btn-sadece-son10 {
-            background: #f39c12;
-        }
-        .btn-sadece-son10:hover {
-            background: #e67e22;
-        }
-
         /* Login Modal */
         .modal {
             display: none;
@@ -395,20 +368,34 @@
             margin-top: 10px;
         }
 
-        /* Detayda gösterim modu göstergesi */
-        .gosterim-modu {
+        .tarih-detay-satiri {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tarih-detay-satiri .tarih {
+            font-weight: 600;
+            color: #333;
+        }
+        .tarih-detay-satiri .pedal {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        .tarih-detay-satiri .saat {
+            color: #888;
             font-size: 0.85em;
-            color: #666;
-            background: #f0f0f0;
-            padding: 4px 12px;
-            border-radius: 15px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏭 Abkant Büküm Makinesi</h1>
-        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Özet + Detay (Tüm Basımlar)</div>
+        <div class="aciklama">📡 Gerçek Zamanlı Takip Sistemi | Anlık + Günlük Özet</div>
 
         <div style="text-align: center;">
             <button class="yenile-btn" onclick="verileriYenile()">🔄 VERİLERİ YENİLE</button>
@@ -424,7 +411,7 @@
         </div>
 
         <div class="ozet">
-            <h3>📊 TÜM GÜNLER</h3>
+            <h3>📊 GÜNLÜK PEDAL ÖZETİ</h3>
             <div class="tarih-secici">
                 <input type="date" id="tarihSecici">
                 <button onclick="tarihSec()">📅 TARİH SEÇ</button>
@@ -456,7 +443,7 @@
                 <thead>
                     <tr>
                         <th onclick="siralaTarih()">Tarih 📅</th>
-                        <th>Toplam Pedal</th>
+                        <th>Gün Sonu Pedal</th>
                         <th>Detay</th>
                     </tr>
                 </thead>
@@ -467,20 +454,13 @@
         </div>
 
         <div id="detayPanel" class="detay" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-                <h4 id="detayTarih" style="margin:0;"></h4>
-                <div class="detay-kontrol">
-                    <span class="gosterim-modu" id="gosterimModu">📋 Tümü gösteriliyor</span>
-                    <button class="btn-tumunu-goster" onclick="detayGoster(mevcutDetayTarih, true)">📋 Tümünü Göster</button>
-                    <button class="btn-sadece-son10" onclick="detayGoster(mevcutDetayTarih, false)">🔟 Son 10</button>
-                </div>
-            </div>
+            <h4 id="detayTarih"></h4>
             <div id="detayBilgi" class="detay-bilgi"></div>
-            <ul id="detayListesi" class="detay-listesi"></ul>
+            <div id="detayListesi"></div>
         </div>
 
         <div class="footer">
-            Canlı Takip | Tüm veriler Firebase'de saklanır | Her basım kaydedilir
+            Canlı Takip | Tüm veriler Firebase'de saklanır | Gerçek üretim = Pedal sayacı
         </div>
     </div>
 
@@ -519,14 +499,12 @@
 
         let tumGunlukVerisi = {};
         let mevcutDetayTarih = null;
-        let mevcutGosterimTumu = true; // true = tümü, false = son 10
         
         // ============ LOGIN KONTROL (Hash ile) ============
         const VALID_USER_HASH = "a3b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2";
         const VALID_PASS_HASH = "8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0";
         
         let pendingDeleteAction = null;
-        let pendingDeleteData = null;
 
         function showModal() {
             document.getElementById('loginModal').classList.add('active');
@@ -539,7 +517,6 @@
         function closeModal() {
             document.getElementById('loginModal').classList.remove('active');
             pendingDeleteAction = null;
-            pendingDeleteData = null;
         }
 
         function confirmLogin() {
@@ -555,7 +532,6 @@
                 if (pendingDeleteAction) {
                     pendingDeleteAction();
                     pendingDeleteAction = null;
-                    pendingDeleteData = null;
                 }
             } else {
                 document.getElementById('modalError').classList.add('active');
@@ -625,13 +601,13 @@
         // ============ TOPLAM BİLGİ ============
         function guncelleToplamBilgi(veri) {
             const gunSayisi = Object.keys(veri).length;
-            let toplamSayac = 0;
+            let toplamPedal = 0;
             for (let tarih in veri) {
                 const gun = veri[tarih];
-                if (gun.toplam && gun.toplam.sayac) toplamSayac += gun.toplam.sayac;
+                if (gun.toplam && gun.toplam.sayac) toplamPedal += gun.toplam.sayac;
             }
             document.getElementById('toplamBilgi').innerHTML =
-                `📊 Toplam ${gunSayisi} gün | Toplam ${toplamSayac} pedal`;
+                `📊 ${gunSayisi} gün | Toplam ${toplamPedal} pedal`;
         }
 
         // ============ TABLOYU DOLDUR ============
@@ -646,105 +622,75 @@
 
             for (let tarih of tarihler) {
                 const gunVerisi = veri[tarih];
-                const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
+                const pedal = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
                 const row = tbody.insertRow();
                 row.insertCell(0).innerHTML = tarih;
-                row.insertCell(1).innerHTML = `<b>${toplam}</b>`;
+                row.insertCell(1).innerHTML = `<b>${pedal}</b>`;
                 const btn = document.createElement('button');
                 btn.innerHTML = '📋 Detay';
-                btn.onclick = (function(t) { return function() { detayGoster(t, true); }; })(tarih);
+                btn.onclick = (function(t) { return function() { detayGoster(t); }; })(tarih);
                 const cell = row.insertCell(2);
                 cell.appendChild(btn);
             }
         }
 
-        // ============ DETAY GÖSTER - TÜMÜ VEYA SON 10 ============
-        function detayGoster(tarih, tumunuGoster = true) {
+        // ============ DETAY GÖSTER - SADECE TOPLAM PEDAL ============
+        function detayGoster(tarih) {
             mevcutDetayTarih = tarih;
-            mevcutGosterimTumu = tumunuGoster;
             
             const panel = document.getElementById('detayPanel');
             const liste = document.getElementById('detayListesi');
             const bilgi = document.getElementById('detayBilgi');
-            const moduSpan = document.getElementById('gosterimModu');
             
             if (!tumGunlukVerisi[tarih]) {
                 document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Veri bulunamadı`;
-                liste.innerHTML = '<li>Bu güne ait kayıt yok</li>';
+                liste.innerHTML = '<div style="padding:10px;text-align:center;color:#888;">Bu güne ait kayıt yok</div>';
                 bilgi.innerHTML = '';
                 panel.style.display = 'block';
                 return;
             }
             
             const gunVerisi = tumGunlukVerisi[tarih];
-            if (!gunVerisi.basimlar || Object.keys(gunVerisi.basimlar).length === 0) {
-                document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Detay yok`;
-                liste.innerHTML = '<li>Bu güne ait basım detayı yok</li>';
-                bilgi.innerHTML = '';
-                panel.style.display = 'block';
-                return;
-            }
+            const toplamPedal = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
             
-            const basimlarObj = gunVerisi.basimlar;
+            document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Günlük Pedal Detayı`;
+            
+            // Gün içindeki tüm pedal kayıtlarını al (saat bazında)
+            const basimlarObj = gunVerisi.basimlar || {};
             const basimlar = Object.values(basimlarObj);
-            
-            basimlar.sort((a, b) => (b.sayac || 0) - (a.sayac || 0));
-            
-            let gosterilecekBasimlar;
-            let gosterimModu;
-            
-            if (tumunuGoster) {
-                gosterilecekBasimlar = basimlar;
-                gosterimModu = '📋 Tümü gösteriliyor';
-            } else {
-                gosterilecekBasimlar = basimlar.slice(0, 10);
-                gosterimModu = '🔟 Son 10 gösteriliyor';
-            }
-            
-            const toplam = gunVerisi.toplam ? gunVerisi.toplam.sayac || 0 : 0;
-            const toplamBasim = basimlar.length;
-            
-            document.getElementById('detayTarih').innerHTML = `📅 ${tarih} - Basım Detayları`;
-            moduSpan.textContent = gosterimModu;
+            const basimSayisi = basimlar.length;
             
             bilgi.innerHTML = `
-                <span>📊 Toplam ${toplamBasim} basım | Son basım: #${toplam}</span>
-                <span>${gosterilecekBasimlar.length} basım gösteriliyor</span>
+                <span>🔢 Gün Sonu Pedal: <strong>${toplamPedal}</strong></span>
+                <span>📝 ${basimSayisi} kayıt</span>
             `;
             
             liste.innerHTML = '';
             
-            // Basım numarasına göre sıralı gösterim (en büyükten küçüğe)
-            let gosterilenSayac = 0;
-            for (let b of gosterilecekBasimlar) {
-                const li = document.createElement('li');
+            if (basimSayisi === 0) {
+                liste.innerHTML = '<div style="padding:10px;text-align:center;color:#888;">Bu güne ait kayıt yok</div>';
+                panel.style.display = 'block';
+                return;
+            }
+            
+            // Saate göre sırala (büyükten küçüğe - en son basım en üstte)
+            basimlar.sort((a, b) => {
+                if (a.saat > b.saat) return -1;
+                if (a.saat < b.saat) return 1;
+                return 0;
+            });
+            
+            // Her kaydı göster
+            for (let b of basimlar) {
+                const div = document.createElement('div');
+                div.className = 'tarih-detay-satiri';
                 const saat = b.saat || '00:00:00';
                 const sayac = b.sayac || 0;
-                gosterilenSayac++;
-                li.innerHTML = `
-                    <span>
-                        <span class="basim-sirasi">#${gosterilenSayac}</span>
-                        🕐 ${saat}
-                    </span>
-                    <span class="basim-numarasi">#${sayac}</span>
+                div.innerHTML = `
+                    <span class="tarih">🕐 ${saat}</span>
+                    <span class="pedal">#${sayac}</span>
                 `;
-                liste.appendChild(li);
-            }
-            
-            // Eğer tümü gösteriliyorsa ve daha fazla kayıt varsa göster
-            if (tumunuGoster && toplamBasim > gosterilecekBasimlar.length) {
-                const extraLi = document.createElement('li');
-                extraLi.style.cssText = 'background: #e8f0fe; color: #666; font-style: italic; text-align: center;';
-                extraLi.innerHTML = `... ve ${toplamBasim - gosterilecekBasimlar.length} basım daha var (hepsi gösteriliyor)`;
-                liste.appendChild(extraLi);
-            }
-            
-            // Eğer son 10 gösteriliyorsa ve daha fazla kayıt varsa
-            if (!tumunuGoster && toplamBasim > 10) {
-                const extraLi = document.createElement('li');
-                extraLi.style.cssText = 'background: #e8f0fe; color: #666; font-style: italic; text-align: center;';
-                extraLi.innerHTML = `... ve ${toplamBasim - 10} basım daha var. "Tümünü Göster" butonuna tıklayın.`;
-                liste.appendChild(extraLi);
+                liste.appendChild(div);
             }
             
             panel.style.display = 'block';
@@ -802,7 +748,7 @@
             }
             
             const excelData = [];
-            excelData.push(['Tarih', 'Toplam Pedal', 'Basım Sayısı']);
+            excelData.push(['Tarih', 'Gün Sonu Pedal']);
             
             const tarihler = Object.keys(seciliVeri).sort((a, b) => {
                 const aParts = a.split('-'), bParts = b.split('-');
@@ -814,23 +760,22 @@
             for (let tarih of tarihler) {
                 const gun = seciliVeri[tarih];
                 const pedal = gun.toplam ? gun.toplam.sayac || 0 : 0;
-                const basimSayisi = gun.basimlar ? Object.keys(gun.basimlar).length : 0;
-                excelData.push([tarih, pedal, basimSayisi]);
+                excelData.push([tarih, pedal]);
                 toplamPedal += pedal;
                 gunSayisi++;
             }
             
-            excelData.push(['', '', '']);
-            excelData.push(['ÖZET', '', '']);
-            excelData.push(['Toplam Gün', gunSayisi, '']);
-            excelData.push(['Toplam Pedal', toplamPedal, '']);
-            excelData.push(['', '', '']);
-            excelData.push(['Oluşturulma Tarihi', new Date().toLocaleString('tr-TR'), '']);
-            excelData.push(['Aralık', aralikMesaji, '']);
+            excelData.push(['', '']);
+            excelData.push(['ÖZET', '']);
+            excelData.push(['Toplam Gün', gunSayisi]);
+            excelData.push(['Toplam Pedal', toplamPedal]);
+            excelData.push(['', '']);
+            excelData.push(['Oluşturulma Tarihi', new Date().toLocaleString('tr-TR')]);
+            excelData.push(['Aralık', aralikMesaji]);
             
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(excelData);
-            ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 15 }];
+            ws['!cols'] = [{ wch: 15 }, { wch: 15 }];
             XLSX.utils.book_append_sheet(wb, ws, 'Abkant Verileri');
             
             let dosyaAdi = 'Abkant_Verileri';
@@ -861,7 +806,7 @@
             if (!secilen) { alert('Lütfen bir tarih seçin!'); return; }
             const parts = secilen.split('-');
             const tarihFormat = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            if (tumGunlukVerisi[tarihFormat]) detayGoster(tarihFormat, true);
+            if (tumGunlukVerisi[tarihFormat]) detayGoster(tarihFormat);
             else alert(`❌ ${tarihFormat} tarihine ait kayıt bulunamadı!`);
         }
 
@@ -914,7 +859,6 @@
                         });
                 }
             };
-            pendingDeleteData = { tarih: tarihFormat };
             showModal();
         }
 
@@ -931,7 +875,6 @@
                         });
                 }
             };
-            pendingDeleteData = { tarih: 'TUMU' };
             showModal();
         }
 
